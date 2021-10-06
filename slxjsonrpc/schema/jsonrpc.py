@@ -34,13 +34,13 @@ _session_id: str = "".join(
 _RpcName: Optional[str] = "JsonRpc"
 
 
-def RpcSetName(name: Optional[str]):
+def rpc_set_name(name: Optional[str]):
     """Set the JsonRpc id name."""
     global _RpcName
     _RpcName = name
 
 
-def RpcGetName() -> Optional[str]:
+def rpc_get_name() -> Optional[str]:
     """Retrieve the JsonRpc id name."""
     global _RpcName
     return _RpcName
@@ -77,6 +77,11 @@ class BaseRPC(BaseModel):
 params_mapping: Dict[str, Union[type, GenericAlias]] = {}
 
 
+def set_params_map(map: Dict[str, Union[type, GenericAlias]]) -> None:
+    global params_mapping
+    params_mapping = map
+
+
 class RpcRequest(BaseRPC):
     """The Standard JsonRpc Request Schema."""
     method: str
@@ -85,8 +90,8 @@ class RpcRequest(BaseRPC):
     @validator('id', pre=True, always=True)
     def id_autofill(cls, v):
         """Validate the id, and auto-fill it is not set."""
-        if RpcGetName() is ...:
-            RpcSetName(v)
+        if rpc_get_name() is ...:
+            rpc_set_name(v)
             return _id_gen()
         return v or _id_gen()
 
@@ -112,7 +117,7 @@ class RpcRequest(BaseRPC):
             return v
 
         if values.get('method') not in params_mapping.keys():
-            raise ValueError(f"{values.get('method')} is not a valid method.")
+            raise ValueError(f"Not valid params fro method: {values.get('method')}.")
 
         model = params_mapping[values.get('method')]
         if model is not None:
@@ -157,7 +162,7 @@ class RpcNotification(BaseModel):
             return v
 
         if values.get('method') not in params_mapping.keys():
-            raise ValueError(f"{values.get('method')} is not a valid method.")
+            raise ValueError(f"Not valid params fro method: {values.get('method')}.")
 
         model = params_mapping[values.get('method')]
         if model is not None:
@@ -170,9 +175,15 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-class RpcResponse(BaseRPC):
+class RpcResponse(BaseModel):
     """The Standard JsonRpc Response Schema."""
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    id: Union[str, int]
     result: Any
+
+    class Config:
+        """Enforce that there can not be added extra keys to the BaseModel."""
+        extra = Extra.forbid
 
     @classmethod
     def update_result(cls, new_type: GenericAlias):
