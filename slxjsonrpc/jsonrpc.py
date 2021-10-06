@@ -30,8 +30,9 @@ from slxjsonrpc.schema.jsonrpc import RpcResponse
 
 from slxjsonrpc.schema.jsonrpc import ErrorModel
 from slxjsonrpc.schema.jsonrpc import RpcErrorCode
-from slxjsonrpc.schema.jsonrpc import RpcSetName
+from slxjsonrpc.schema.jsonrpc import rpc_set_name
 from slxjsonrpc.schema.jsonrpc import RpcVersion
+from slxjsonrpc.schema.jsonrpc import set_params_map
 
 JsonSchemas = Union[
     RpcError,
@@ -79,7 +80,9 @@ class SlxJsonRpc:
         self.log = logging.getLogger(__name__)
         self.log.addHandler(logging.NullHandler())
 
-        RpcSetName(...)
+        rpc_set_name(...)
+        RpcRequest.update_method(methods)
+        set_params_map(params)
 
         self.batch_lock: int = 0
         self.batched_list: RpcBatch = []
@@ -189,6 +192,9 @@ class SlxJsonRpc:
         For the Parsed data, there will be check for any subscriptions,
         if found, this callback will be called, and given the data
 
+        TODO: Handle a parsing of a RpcError.
+        TODO: Add to batched_list, instead of return, when in batch scope.
+
         Args:
             data: The Raw data to be parsed.
 
@@ -199,100 +205,99 @@ class SlxJsonRpc:
         # Raises:
         #     ValueError, if the given data are not a valid json.
         """
-        j_data = data if isinstance(data, dict) else json.loads(data)
+        try:
+            j_data = data if isinstance(data, dict) else json.loads(data)
+        except json.decoder.JSONDecodeError as err:
+            return RpcError(
+                id=None,
+                error=ErrorModel(
+                    code=RpcErrorCode.ParseError,
+                    message="Parse Error",
+                    data=err.msg
+                )
+            )
 
         # TODO (MBK): Handle RpcBatch list, parse each single one for itself.
         p_data = self._parse_data(j_data)
 
-        if isinstance(p_data, RpcError):
-            return p_data
+        print(f"{p_data}")
 
-        elif isinstance(p_data, RpcNotification):
-            if p_data.method in self._method_cb.keys():
-                self._method_cb[p_data.method](p_data.params)
-                return None
-            return ErrorModel(
-                code=RpcErrorCode.MethodNotFound,
-                message="Method Not Found",
-                data="p_data.method"
-            )
+        try:
+            if isinstance(p_data, RpcError):
+                return p_data
 
-        elif isinstance(p_data, RpcRequest):
-            if p_data.method in self._method_cb.keys():
-                result = self._method_cb[p_data.method](p_data.params)
-                return RpcResponse(
+            elif isinstance(p_data, RpcNotification):
+                if p_data.method in self._method_cb.keys():
+                    self._method_cb[p_data.method](p_data.params)
+                    return None
+                return RpcError(
+                    id=None,
+                    error=ErrorModel(
+                        code=RpcErrorCode.MethodNotFound,
+                        message="Method Not Found",
+                        data=p_data.method
+                    )
+                )
+
+            elif isinstance(p_data, RpcRequest):
+                if p_data.method in self._method_cb.keys():
+                    result = self._method_cb[p_data.method](p_data.params)
+                    return RpcResponse(
+                        id=p_data.id,
+                        jsonrpc=RpcVersion.v2_0,
+                        result=result
+                    )
+                return RpcError(
                     id=p_data.id,
-                    jsonrpc=RpcVersion.v2_0,
-                    result=result
+                    error=ErrorModel(
+                        code=RpcErrorCode.MethodNotFound,
+                        message="Method Not Found",
+                        data=p_data.method
+                    )
                 )
-            return ErrorModel(
-                code=RpcErrorCode.MethodNotFound,
-                message="Method Not Found",
-                data="p_data.method"
-            )
 
-        elif isinstance(p_data, RpcResponse):
-            if p_data.id not in self._id_cb.keys():
-                return ErrorModel(
-                    code=RpcErrorCode.MethodNotFound,
-                    message="Method Not Found",
-                    data="p_data.method"
+            elif isinstance(p_data, RpcResponse):
+                if p_data.id not in self._id_cb.keys():
+                    return None
+                self._id_cb[p_data.id](p_data.result)
+        except Exception as err:
+            return RpcError(
+                id=p_data.id,
+                error=ErrorModel(
+                    code=RpcErrorCode.InternalError,
+                    message="Internal Error",
+                    data=err.args[0]
                 )
-            self._id_cb[p_data.id](p_data.result)
+            )
 
         return None
 
     def __ValidationError2ErrorModel(
         self,
         errors: List[Dict[str, Union[List[str], str, Dict[str, List[str]]]]]
-    ) -> Union[ErrorModel, None]:
-        # TODO(MBK): Make a algorithmic to prioritize the Errors.
-
-        # This order?
-        # 1) Method Not Found (Everything right except Method.)
-        # 2) Invalid Parameter(s) (If the Data or values are wrong?)
-        # 3) Invalid Request (Missing/Extra Keys or not a JSON/RPC)
-
-        # any( {'enum_values': ["2.0"]} in err.values() for err in errors)
-        # 1)
-        # filter(lambda x: {'enum_values':list(self.methods)} in x.values(), errors)[0]
-        # filter(lambda x: {'enum_values': list(RpcVersion)} in x.values(), errors)[0]
-        # 2)
-        # If result type is: Dict[str, int]
-        #  {'loc': ('__root__', 'result'), 'msg': 'value is not a valid dict', 'type': 'type_error.dict'}]
-        # If result type is: int
-        # {'loc': ('__root__', 'result'), 'msg': 'value is not a valid integer', 'type': 'type_error.integer'}]
-
-        # 3)
-        # filter(lambda x: {'type': 'value_error.extra'} in x-values(), errors)[0]
-        # filter(lambda x: {'type': 'value_error.missing'} in x-values(), errors)[0]
-        #
-        e_type = errors[0]
-        if e_type['type'] in ["value_error.missing", "value_error.extra"]:
+    ) -> ErrorModel:
+        print([x.get('loc') for x in errors])
+        method_error = list(filter(lambda x: x.get('type') == "type_error.enum", errors))
+        params_error = list(filter(lambda x: x.get('loc') == ('__root__', 'params', '__root__'), errors))
+        type_error = list(filter(lambda x: x.get('type') in ["value_error.missing", "value_error.extra"], errors))
+        if method_error:
             return ErrorModel(
-                code=RpcErrorCode.InvalidRequest,
-                message="Invalid Request",
-                data=e_type
+                code=RpcErrorCode.MethodNotFound,
+                message="Method Not Found",
+                data=method_error[0]
             )
-        elif e_type['type'] == "type_error.enum":
-
-            if "method" in e_type["loc"]:
-                return ErrorModel(
-                    code=RpcErrorCode.MethodNotFound,
-                    message="Method Not Found",
-                    data=e_type
-                )
-
+        elif params_error:
             return ErrorModel(
                 code=RpcErrorCode.InvalidParams,
                 message="Invalid parameter(s)",
-                data=e_type
+                data=params_error[0]
             )
-
-            # TODO(MBK): Handle when RPCSuccess->result is wrong, exception.
-            #            If that happens... 'Invalid paramter'?
-
-        return None
+        elif type_error:
+            return ErrorModel(
+                code=RpcErrorCode.InvalidRequest,
+                message="Invalid Request",
+                data=type_error[0]
+            )
 
     def _parse_data(
         self,
@@ -302,16 +307,6 @@ class SlxJsonRpc:
             p_data: JsonSchemas = parse_obj_as(
                 JsonSchemas,  # type: ignore
                 data
-            )
-        except json.JSONDecodeError:
-            return RpcError(
-                id=None,
-                jsonrpc=RpcVersion.v2_0,
-                error=ErrorModel(
-                    code=RpcErrorCode.ParseError,
-                    message="Parse error",
-                    data=data
-                ),
             )
         except ValidationError as error:
             error_package = self.__ValidationError2ErrorModel(
