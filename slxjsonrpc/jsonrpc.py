@@ -127,11 +127,7 @@ class SlxJsonRpc:
         self._id_cb[r_data.id] = callback
         self._id_method[r_data.id] = method
 
-        if not self.batch_lock:
-            return r_data
-
-        self.batched_list.append(r_data)
-        return None
+        return self._batch_filter(r_data)
 
     def create_notification(
         self,
@@ -153,16 +149,10 @@ class SlxJsonRpc:
         Raises:
             ValidationError, if the given data do not fit the given Schema.
         """
-        r_data = RpcNotification(
+        return self._batch_filter(RpcNotification(
             method=method,
             params=params
-        )
-
-        if not self.batch_lock:
-            return r_data
-
-        self.batched_list.append(r_data)
-        return None
+        ))
 
     @contextmanager
     def batch(self) -> RpcBatch:
@@ -181,6 +171,26 @@ class SlxJsonRpc:
             self.batch_lock -= 1
             # return RPCBatch(self.batched_list)
             return parse_obj_as(self.batched_list, RpcBatch)
+
+    def _batch_filter(
+        self,
+        data: Union[RpcRequest, RpcNotification, RpcError, RpcResponse]
+    ) -> Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]:
+        """
+        Check if batch is enabled, and return the right reply.
+
+        Args:
+            data: RpcPackage to be returned if batch is not enabled.
+
+        Returns:
+            None, If Batch is enabled.
+            data, if Batch is disabled.
+        """
+        if not self.batch_lock:
+            return data
+
+        self.batched_list.append(data)
+        return None
 
     def parser(
         self,
@@ -208,14 +218,14 @@ class SlxJsonRpc:
         try:
             j_data = data if isinstance(data, dict) else json.loads(data)
         except json.decoder.JSONDecodeError as err:
-            return RpcError(
+            return self._batch_filter(RpcError(
                 id=None,
                 error=ErrorModel(
                     code=RpcErrorCode.ParseError,
                     message="Parse Error",
                     data=err.msg
                 )
-            )
+            ))
 
         # TODO (MBK): Handle RpcBatch list, parse each single one for itself.
         p_data = self._parse_data(j_data)
@@ -230,45 +240,45 @@ class SlxJsonRpc:
                 if p_data.method in self._method_cb.keys():
                     self._method_cb[p_data.method](p_data.params)
                     return None
-                return RpcError(
+                return self._batch_filter(RpcError(
                     id=None,
                     error=ErrorModel(
                         code=RpcErrorCode.MethodNotFound,
                         message="Method Not Found",
                         data=p_data.method
                     )
-                )
+                ))
 
             elif isinstance(p_data, RpcRequest):
                 if p_data.method in self._method_cb.keys():
                     result = self._method_cb[p_data.method](p_data.params)
-                    return RpcResponse(
+                    return self._batch_filter(RpcResponse(
                         id=p_data.id,
                         jsonrpc=RpcVersion.v2_0,
                         result=result
-                    )
-                return RpcError(
+                    ))
+                return self._batch_filter(RpcError(
                     id=p_data.id,
                     error=ErrorModel(
                         code=RpcErrorCode.MethodNotFound,
                         message="Method Not Found",
                         data=p_data.method
                     )
-                )
+                ))
 
             elif isinstance(p_data, RpcResponse):
                 if p_data.id not in self._id_cb.keys():
                     return None
                 self._id_cb[p_data.id](p_data.result)
         except Exception as err:
-            return RpcError(
+            return self._batch_filter(RpcError(
                 id=p_data.id,
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
                     message="Internal Error",
                     data=err.args[0]
                 )
-            )
+            ))
 
         return None
 
