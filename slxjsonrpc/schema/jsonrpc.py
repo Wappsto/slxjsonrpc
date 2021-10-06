@@ -34,7 +34,7 @@ _session_id: str = "".join(
 _RpcName: Optional[str] = "JsonRpc"
 
 
-def rpc_set_name(name: Optional[str]):
+def rpc_set_name(name: Optional[str]) -> None:
     """Set the JsonRpc id name."""
     global _RpcName
     _RpcName = name
@@ -46,7 +46,7 @@ def rpc_get_name() -> Optional[str]:
     return _RpcName
 
 
-def _id_gen():
+def _id_gen() -> str:
     """Create an unique Rpc-id."""
     global _session_count
     global _session_id
@@ -78,6 +78,7 @@ params_mapping: Dict[str, Union[type, GenericAlias]] = {}
 
 
 def set_params_map(map: Dict[str, Union[type, GenericAlias]]) -> None:
+    """Set the method to params schema mapping."""
     global params_mapping
     params_mapping = map
 
@@ -88,7 +89,7 @@ class RpcRequest(BaseRPC):
     params: Optional[Any]
 
     @validator('id', pre=True, always=True)
-    def id_autofill(cls, v):
+    def id_autofill(cls, v) -> str:
         """Validate the id, and auto-fill it is not set."""
         if rpc_get_name() is ...:
             rpc_set_name(v)
@@ -96,7 +97,7 @@ class RpcRequest(BaseRPC):
         return v or _id_gen()
 
     @classmethod
-    def update_method(cls, new_type: Enum):
+    def update_method(cls, new_type: Enum) -> None:
         """Update the Method schema, to fit the new one."""
         new_fields = ModelField.infer(
             name="method",
@@ -109,7 +110,7 @@ class RpcRequest(BaseRPC):
         cls.__annotations__['method'] = new_type
 
     @validator("params", pre=True, always=True)
-    def method_params_mapper(cls, v, values, **kwargs):
+    def method_params_mapper(cls, v, values, **kwargs) -> Any:
         """Check & enforce the params schema, depended on the method value."""
         global params_mapping
 
@@ -141,7 +142,7 @@ class RpcNotification(BaseModel):
         extra = Extra.forbid
 
     @classmethod
-    def update_method(cls, new_type: Enum):
+    def update_method(cls, new_type: Enum) -> Any:
         """Update the Method schema, to fit the new one."""
         new_fields = ModelField.infer(
             name="method",
@@ -154,7 +155,7 @@ class RpcNotification(BaseModel):
         cls.__annotations__['method'] = new_type
 
     @validator("params", pre=True, always=True)
-    def method_params_mapper(cls, v, values, **kwargs):
+    def method_params_mapper(cls, v, values, **kwargs) -> Any:
         """Check & enforce the params schema, depended on the method value."""
         global params_mapping
 
@@ -186,7 +187,7 @@ class RpcResponse(BaseModel):
         extra = Extra.forbid
 
     @classmethod
-    def update_result(cls, new_type: GenericAlias):
+    def update_result(cls, new_type: GenericAlias) -> None:
         """Update the Method schema, to fit the new schema."""
         new_fields = ModelField.infer(
             name="result",
