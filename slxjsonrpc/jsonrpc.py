@@ -49,7 +49,7 @@ class SlxJsonRpc:
     It also ensures to route each message to where it is expected.
 
     SlxJsonRpc is build to be both that JsonRpc server & client.
-    To enable the JsonRpc-server, the method_map
+    To enable the JsonRpc-server, the method_map need to be given.
     """
 
     def __init__(
