@@ -19,3 +19,15 @@ $ pip install slxjsonrpc
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
+
+
+
+Known Bugs {icon bug color=red}
+===============================================================================
+
+
+TODO List {icon cog spin}
+===============================================================================
+* [ ] Push to pip.
+* [ ] Test & write Bulk.
+* [ ] Properly handling when Receiving a RpcError.
