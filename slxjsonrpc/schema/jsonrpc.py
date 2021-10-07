@@ -77,10 +77,10 @@ class BaseRPC(BaseModel):
 params_mapping: Dict[str, Union[type, GenericAlias]] = {}
 
 
-def set_params_map(map: Dict[str, Union[type, GenericAlias]]) -> None:
+def set_params_map(mapping: Dict[str, Union[type, GenericAlias]]) -> None:
     """Set the method to params schema mapping."""
     global params_mapping
-    params_mapping = map
+    params_mapping = mapping
 
 
 class RpcRequest(BaseRPC):
@@ -227,6 +227,31 @@ class RpcErrorCode(Enum):
     InvalidParams = -32602
     InternalError = -32603
     ServerError = -32000
+
+
+class RpcErrorMsg(str, Enum):
+    """
+    JsonRpc Standard Error Messages.
+
+    Error Codes:    Error code:         Message Description:
+    ---
+        -32700      Parse error         Invalid JSON was received by the server.
+                                        An error occurred on the server while parsing the JSON text.
+        -32600      Invalid Request     The JSON sent is not a valid Request object.
+        -32601      Method not found    The method does not exist / is not available.
+
+        -32602      Invalid params      Invalid method parameter(s).
+        -32603      Internal error      Internal JSON-RPC error.
+        -32000      Server error        IconServiceEngine internal error.
+          ...
+        -32099      Server error        IconServiceEngine internal error.
+    """
+    ParseError = "Invalid JSON was received by the server."
+    InvalidRequest = "The JSON sent is not a valid Request object."
+    MethodNotFound = "The method does not exist / is not available."
+    InvalidParams = "Invalid method parameter(s)."
+    InternalError = "Internal JSON-RPC error."
+    ServerError = "Internal server error."
 
 
 class ErrorModel(BaseModel):

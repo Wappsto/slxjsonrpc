@@ -30,6 +30,7 @@ from slxjsonrpc.schema.jsonrpc import RpcResponse
 
 from slxjsonrpc.schema.jsonrpc import ErrorModel
 from slxjsonrpc.schema.jsonrpc import RpcErrorCode
+from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
 from slxjsonrpc.schema.jsonrpc import rpc_set_name
 from slxjsonrpc.schema.jsonrpc import RpcVersion
 from slxjsonrpc.schema.jsonrpc import set_params_map
@@ -50,13 +51,13 @@ class SlxJsonRpc:
     It also ensures to route each message to where it is expected.
 
     SlxJsonRpc is build to be both that JsonRpc server & client.
-    To enable the JsonRpc-server, the method_map need to be given.
+    To enable the JsonRpc-server, the method_cb need to be given.
     """
 
     def __init__(
         self,
         methods: Optional[Enum] = None,
-        method_map: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
+        method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
         result: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
         params: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
     ):
@@ -68,7 +69,7 @@ class SlxJsonRpc:
         Args:
             method: (Optional) A String-Enum, with all the acceptable methods.
                     If not given, will there not be make checks for any wrong methods.
-            method_map: The mapping for each given method to a function call.
+            method_cb: The mapping for each given method to a function call. (Server only)
                         callback: The function to be call when data is received.
                                   The Callback gets the params definded in as args,
                                   & should return the Result defined.
@@ -84,18 +85,20 @@ class SlxJsonRpc:
         RpcRequest.update_method(methods)
         set_params_map(params)
 
-        self.batch_lock: int = 0
-        self.batched_list: RpcBatch = []
+        self.__batch_lock: int = 0
+        self.__batched_list: RpcBatch = []
 
-        self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_map if method_map else {}
+        self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
         self._id_cb: Dict[str, Callable[[Any], None]] = {}
+        self._id_ecb: Dict[str, Callable[[Any], None]] = {}
         self._id_method: Dict[str, Union[Enum, str]] = {}
 
     def create_request(
         self,
         method: Union[Enum, str],
         callback: Callable[[Any], None],
+        error_callback: Optional[Callable[[ErrorModel], None]] = None,
         params: Optional[Any] = None,
     ) -> RpcRequest:
         """
@@ -107,14 +110,19 @@ class SlxJsonRpc:
         it will be passed on to the callback.
 
         Args:
-            method: Should be a apart of the given Method Enum, given on init, or if not given, a string.
-            callback: The function to be call when data is received.
-                      If not given, the function will be blocking until the response is received.
-                      The Callback gets the Result datamodel (if set) back as argument.
-            params: (Optional) Should be a DataModel, if given on init, else a json valid data.
+            method: Should be a apart of the given Method Enum, given on init,
+                    or if not given, a string.
+            callback: The function to be called when data is received.
+                      The Callback gets the Result datamodel (if set)
+                      else a Dict/List back as argument.
+            error_callback: (Optional) The function to be called, when an error
+                            have happened.
+                            The callback gets an ErrorModel object as parameter.
+            params: (Optional) Should be fitting the a DataModel,
+                    if given on init, else a valid Dictionary or List.
 
         Returns:
-            The reply for given request, or if callback is given, the ID of the request.
+            RpcRequest, That should be send.
 
         Raises:
             ValidationError, if the given data do not fit the given Schema.
@@ -125,7 +133,11 @@ class SlxJsonRpc:
         )
 
         self._id_cb[r_data.id] = callback
+        if error_callback:
+            self._id_ecb[r_data.id] = error_callback
         self._id_method[r_data.id] = method
+
+        self.log.debug(f"Request Package Created:{r_data}")
 
         return self._batch_filter(r_data)
 
@@ -140,8 +152,10 @@ class SlxJsonRpc:
         The Created Notification, are guaranteed to fit the given schema.
 
         Args:
-            method: Should be a apart of the given Method Enum, given on init, or if not given, a string.
-            params: (Optional) Should be a DataModel, if given on init, else a json valid data.
+            method: Should be a apart of the given Method Enum, given on init,
+                    or if not given, a string.
+            params: (Optional) Should be fitting the a DataModel,
+                    if given on init, else a valid Dictionary or List.
 
         Returns:
             The RPCNotification, to be send.
@@ -149,28 +163,44 @@ class SlxJsonRpc:
         Raises:
             ValidationError, if the given data do not fit the given Schema.
         """
-        return self._batch_filter(RpcNotification(
+        r_data = RpcNotification(
             method=method,
             params=params
-        ))
+        )
+        self.log.debug(f"Request Package Created:{r_data}")
+        return self._batch_filter(r_data)
+
+    # -------------------------------------------------------------------------
+    #                          Batching Functions
+    # -------------------------------------------------------------------------
 
     @contextmanager
-    def batch(self) -> RpcBatch:
-        """
-        Batch all RPC's called within the scope, into one RPC-Batch-List.
-
-        Returns:
-            A list with all the RPC packages.
-        """
-        # UNSURE(MBK): Should this be a lock, or a count to make it multiple
-        #              use safe?
-        self.batch_lock += 1
+    def batch(self):
+        """Batch all RPC's called within the scope, into one RPC-Batch-List."""
+        self.__batch_lock += 1
         try:
             yield
         finally:
-            self.batch_lock -= 1
-            # return RPCBatch(self.batched_list)
-            return parse_obj_as(self.batched_list, RpcBatch)
+            self.__batch_lock -= 1
+
+    def bulk_size(self) -> int:
+        """Retrieve the number of packages in the Bulk."""
+        return len(self.__batched_list)
+
+    def get_batch_data(self) -> Optional[RpcBatch]:
+        """
+        Retrieve the Bulked packages.
+
+        Returns:
+            RpcBatch, if there was batch anything.
+            None, if nothing was batch.
+        """
+        if len(self.__batched_list) < 1:
+            return None
+        data = self.__batched_list.copy()
+        self.__batched_list.clear()
+        return RpcBatch(data)
+        # return parse_obj_as(data, RpcBatch)
 
     def _batch_filter(
         self,
@@ -186,23 +216,28 @@ class SlxJsonRpc:
             None, If Batch is enabled.
             data, if Batch is disabled.
         """
-        if not self.batch_lock:
+        if not self.__batch_lock:
             return data
 
-        self.batched_list.append(data)
+        self.log.debug(f"Batching of package: {data}")
+        self.__batched_list.append(data)
         return None
+
+    # -------------------------------------------------------------------------
+    #                          Parsing Functions
+    # -------------------------------------------------------------------------
 
     def parser(
         self,
         data: Union[bytes, str, dict]
     ) -> Union[RpcError, RpcResponse, None]:
         """
-        Parse raw JsonRpc data, & returns the Response/Error.
+        Parse raw JsonRpc data, & returns the Response or Error.
 
         For the Parsed data, there will be check for any subscriptions,
-        if found, this callback will be called, and given the data
+        if found, this callback will be called, and given the data.
 
-        TODO: Handle a parsing of a RpcError.
+        TODO: Handle a received RpcError.
         TODO: Add to batched_list, instead of return, when in batch scope.
 
         Args:
@@ -210,10 +245,7 @@ class SlxJsonRpc:
 
         Returns:
             The fitting JsonRpc reply to the given data.
-            or None, if no reply are needed.
-
-        # Raises:
-        #     ValueError, if the given data are not a valid json.
+            None, if no reply are needed.
         """
         try:
             j_data = data if isinstance(data, dict) else json.loads(data)
@@ -222,7 +254,7 @@ class SlxJsonRpc:
                 id=None,
                 error=ErrorModel(
                     code=RpcErrorCode.ParseError,
-                    message="Parse Error",
+                    message=RpcErrorMsg.ParseError,
                     data=err.msg
                 )
             ))
@@ -230,24 +262,28 @@ class SlxJsonRpc:
         # TODO (MBK): Handle RpcBatch list, parse each single one for itself.
         p_data = self._parse_data(j_data)
 
-        print(f"{p_data}")
-
         try:
             if isinstance(p_data, RpcError):
-                return p_data
+                if p_data.id not in self._id_cb.keys():
+                    return p_data
+                self._id_cb.pop(p_data.id)
+                if p_data.id not in self._id_ecb.keys():
+                    self.log.warning(f"Unhanded error: {p_data}")
+                else:
+                    self._id_ecb.pop(p_data.id)(p_data.error)
 
             elif isinstance(p_data, RpcNotification):
                 if p_data.method in self._method_cb.keys():
                     self._method_cb[p_data.method](p_data.params)
-                    return None
-                return self._batch_filter(RpcError(
-                    id=None,
-                    error=ErrorModel(
-                        code=RpcErrorCode.MethodNotFound,
-                        message="Method Not Found",
-                        data=p_data.method
-                    )
-                ))
+                else:
+                    return self._batch_filter(RpcError(
+                        id=None,
+                        error=ErrorModel(
+                            code=RpcErrorCode.MethodNotFound,
+                            message=RpcErrorMsg.MethodNotFound,
+                            data=p_data.method
+                        )
+                    ))
 
             elif isinstance(p_data, RpcRequest):
                 if p_data.method in self._method_cb.keys():
@@ -261,21 +297,22 @@ class SlxJsonRpc:
                     id=p_data.id,
                     error=ErrorModel(
                         code=RpcErrorCode.MethodNotFound,
-                        message="Method Not Found",
+                        message=RpcErrorMsg.MethodNotFound,
                         data=p_data.method
                     )
                 ))
 
             elif isinstance(p_data, RpcResponse):
                 if p_data.id not in self._id_cb.keys():
-                    return None
-                self._id_cb[p_data.id](p_data.result)
+                    self.log.warning(f"Received an unknown RpcResponse: {p_data}")
+                else:
+                    self._id_cb.pop(p_data.id)(p_data.result)
         except Exception as err:
             return self._batch_filter(RpcError(
                 id=p_data.id,
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
-                    message="Internal Error",
+                    message=RpcErrorMsg.InternalError,
                     data=err.args[0]
                 )
             ))
@@ -286,26 +323,25 @@ class SlxJsonRpc:
         self,
         errors: List[Dict[str, Union[List[str], str, Dict[str, List[str]]]]]
     ) -> ErrorModel:
-        print([x.get('loc') for x in errors])
         method_error = list(filter(lambda x: x.get('type') == "type_error.enum", errors))
         params_error = list(filter(lambda x: x.get('loc') == ('__root__', 'params', '__root__'), errors))
         type_error = list(filter(lambda x: x.get('type') in ["value_error.missing", "value_error.extra"], errors))
         if method_error:
             return ErrorModel(
                 code=RpcErrorCode.MethodNotFound,
-                message="Method Not Found",
+                message=RpcErrorMsg.MethodNotFound,
                 data=method_error[0]
             )
         elif params_error:
             return ErrorModel(
                 code=RpcErrorCode.InvalidParams,
-                message="Invalid parameter(s)",
+                message=RpcErrorMsg.InvalidParams,
                 data=params_error[0]
             )
         elif type_error:
             return ErrorModel(
                 code=RpcErrorCode.InvalidRequest,
-                message="Invalid Request",
+                message=RpcErrorMsg.InvalidRequest,
                 data=type_error[0]
             )
 
@@ -324,7 +360,7 @@ class SlxJsonRpc:
             )
 
             if not error_package:
-                self.log.exception("Unhanded ValidationError.")
+                self.log.exception(f"Unhanded ValidationError: {data}")
                 raise
 
             return RpcError(
