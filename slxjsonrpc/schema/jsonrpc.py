@@ -1,4 +1,9 @@
-"""Contains the JsonRpc Schemas used for the SlxJsonRpc Package."""
+"""
+Contains the JsonRpc Schemas used for the SlxJsonRpc Package.
+
+The slxJsonRpc are build with the specification in mind, listed here:
+    https://www.jsonrpc.org/specification
+"""
 import random
 import string
 
@@ -84,7 +89,15 @@ def set_params_map(mapping: Dict[str, Union[type, GenericAlias]]) -> None:
 
 
 class RpcRequest(BaseRPC):
-    """The Standard JsonRpc Request Schema."""
+    """
+    The Standard JsonRpc Request Schema, used to do a request of the server.
+
+    Attributes:
+        jsonrpc: The JsonRpc version this schema is using. (Default v2.0)
+        id: A identifier set by the client. (Is emitted it will be auto generated)
+        method: The name of the method to be invoked.
+        params: (Optional) The input parameters for the invoked method.
+    """
     method: str
     params: Optional[Any]
 
@@ -129,11 +142,16 @@ class RpcRequest(BaseRPC):
 
 class RpcNotification(BaseModel):
     """
-    The Standard JsonRpc Notification Schema.
+    The Standard JsonRpc Notification Schema, to Notifies the server of change.
 
     Supposed to be a Request Object, just without the 'id'.
+
+    Attributes:
+        jsonrpc: The JsonRpc version this schema is using. (Default v2.0)
+        method: The name of the method to be invoked.
+        params: (Optional) The input parameters for the invoked method.
     """
-    jsonrpc: RpcVersion
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     method: str
     params: Optional[Any]
 
@@ -177,7 +195,14 @@ class RpcNotification(BaseModel):
 ###############################################################################
 
 class RpcResponse(BaseModel):
-    """The Standard JsonRpc Response Schema."""
+    """
+    The Standard JsonRpc Response Schema, that is responded with.
+
+    Attributes:
+        jsonrpc: The JsonRpc version this schema is using. (Default v2.0)
+        id: Must be the same value as the object this is a response to.
+        result: The result of the Request object, if it did not fail.
+    """
     jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     id: Union[str, int]
     result: Any
@@ -255,8 +280,15 @@ class RpcErrorMsg(str, Enum):
 
 
 class ErrorModel(BaseModel):
-    """The Default JsonRpc Error message."""
-    code: RpcErrorCode
+    """
+    The Default JsonRpc Error message, that is responded with on error.
+
+    Attributes:
+        code: The error code.
+        message: A short describing of the error.
+        data: (Optional), a Additional information of the error.
+    """
+    code: Union[RpcErrorCode, int] = Field(None, le=-32001, ge=-32099)
     message: str
     data: Optional[Any]
 
@@ -266,7 +298,14 @@ class ErrorModel(BaseModel):
 
 
 class RpcError(BaseRPC):
-    """The default JsonRpc Error Reply Schema."""
+    """
+    The default JsonRpc Error Reply Schema.
+
+    Attributes:
+        jsonrpc:
+        id:
+        error:
+    """
     error: ErrorModel
 
 
