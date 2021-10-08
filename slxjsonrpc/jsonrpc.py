@@ -43,6 +43,50 @@ JsonSchemas = Union[
 ]
 
 
+class RpcErrorException(Exception):
+    """
+    Exception to reply a custom JsonRpc Error Response.
+
+    This custom Exception extends the Exception class and implements
+    a Rpc Error Code & message, to be transformed into the RpcError response.
+
+    Attributes:
+        Initializing with a msg & code arguments.
+    """
+    def __init__(self, code: int, msg: str, data=None):
+        """
+        Initialize the RpcErrorException with the Rpc Error Response info.
+
+        Args:
+            code: The Rpc Error code, within the range of -32000 to -32099
+            msg: The Rpc Error message, that shortly describe the error for given code.
+            data: The Rpc
+        """
+        super().__init__()
+        self.code = code
+        self.msg = msg
+        self.data = data
+
+    def get_rpc_model(self, id) -> RpcError:
+        """
+        Returns a RpcError Response, for this given exception.
+
+        Args:
+            id: The JsonRpc Id, for which this exception occurred.
+
+        Returns:
+            RpcError response fitting for this exception.
+        """
+        return RpcError(
+            id=id,
+            error=ErrorModel(
+                code=self.code,
+                message=self.msg,
+                data=self.data
+            )
+        )
+
+
 class SlxJsonRpc:
     """
     SlxJsonRpc is a JsonRpc helper class, that uses pydantic.
@@ -73,6 +117,9 @@ class SlxJsonRpc:
                         callback: The function to be call when data is received.
                                   The Callback gets the params definded in as args,
                                   & should return the Result defined.
+                                  If an error happens, and custom error code
+                                  are needed, to send back, raise the RpcErrorException
+                                  in the callback.
             result: (Optional) The method & 'result' mapping.
                     If not given, will there not be make checks for any wrong 'result'.
             params: (Optional) The Parser method & 'params' mapping.
@@ -150,6 +197,8 @@ class SlxJsonRpc:
         Create a JsonRpc Notification, with given method & params.
 
         The Created Notification, are guaranteed to fit the given schema.
+        Please note that there will not be a response for the notification
+        send to the server.
 
         Args:
             method: Should be a apart of the given Method Enum, given on init,
@@ -259,7 +308,7 @@ class SlxJsonRpc:
                 )
             ))
 
-        # TODO (MBK): Handle RpcBatch list, parse each single one for itself.
+        # TODO (MBK): Handle RpcBatch list, parse each single one for itself & Batch them.
         p_data = self._parse_data(j_data)
 
         try:
@@ -270,11 +319,13 @@ class SlxJsonRpc:
                 if p_data.id not in self._id_ecb.keys():
                     self.log.warning(f"Unhanded error: {p_data}")
                 else:
-                    self._id_ecb.pop(p_data.id)(p_data.error)
+                    with self._except_handler():
+                        self._id_ecb.pop(p_data.id)(p_data.error)
 
             elif isinstance(p_data, RpcNotification):
                 if p_data.method in self._method_cb.keys():
-                    self._method_cb[p_data.method](p_data.params)
+                    with self._except_handler():
+                        self._method_cb[p_data.method](p_data.params)
                 else:
                     return self._batch_filter(RpcError(
                         id=None,
@@ -287,7 +338,8 @@ class SlxJsonRpc:
 
             elif isinstance(p_data, RpcRequest):
                 if p_data.method in self._method_cb.keys():
-                    result = self._method_cb[p_data.method](p_data.params)
+                    with self._except_handler():
+                        result = self._method_cb[p_data.method](p_data.params)
                     return self._batch_filter(RpcResponse(
                         id=p_data.id,
                         jsonrpc=RpcVersion.v2_0,
@@ -306,18 +358,38 @@ class SlxJsonRpc:
                 if p_data.id not in self._id_cb.keys():
                     self.log.warning(f"Received an unknown RpcResponse: {p_data}")
                 else:
-                    self._id_cb.pop(p_data.id)(p_data.result)
+                    with self._except_handler():
+                        self._id_cb.pop(p_data.id)(p_data.result)
+        except RpcErrorException as err:
+            print(f"RpcErrorException: {err}")
+            return self._batch_filter(err.get_rpc_model(id=p_data.id))
         except Exception as err:
+            print(f"Normal: {err}")
             return self._batch_filter(RpcError(
                 id=p_data.id,
                 error=ErrorModel(
-                    code=RpcErrorCode.InternalError,
-                    message=RpcErrorMsg.InternalError,
+                    code=RpcErrorCode.InternalError,  # UNSURE: RpcErrorCode.ServerError
+                    message=RpcErrorMsg.InternalError,  # UNSURE: RpcErrorMsg.ServerError
                     data=err.args[0]
                 )
             ))
 
         return None
+
+    @contextmanager
+    def _except_handler(self):
+        try:
+            yield
+        except RpcErrorException:
+            print("RpcError Exception!")
+            raise
+        except Exception as err:
+            print("Python Exception!")
+            raise RpcErrorException(
+                code=RpcErrorCode.ServerError,  # UNSURE: RpcErrorCode.InternalError
+                msg=RpcErrorMsg.ServerError,  # UNSURE: RpcErrorMsg.InternalError
+                data=err.args[0]
+            ).with_traceback(err.__traceback__)
 
     def __ValidationError2ErrorModel(
         self,
