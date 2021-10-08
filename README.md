@@ -1,4 +1,5 @@
-# slxjsonrpc
+slxjsonrpc
+===============================================================================
 
 SlxJsonRpc is a JsonRpc helper class, that uses pydantic.
 
@@ -16,18 +17,22 @@ The slxjsonrpc package can be installed using PIP (Python Package Index) as foll
 $ pip install slxjsonrpc
 ```
 
-## License
+License
+-------------------------------------------------------------------------------
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
 
 
 
-Known Bugs {icon bug color=red}
-===============================================================================
+Known Bugs
+-------------------------------------------------------------------------------
+* Can not receive a Bulked JsonRpc List. Yet.
 
 
-TODO List {icon cog spin}
-===============================================================================
+TODO List
+-------------------------------------------------------------------------------
+* [ ] Use case Examples.
+* [ ] Enforce the result Schema.
 * [ ] Push to pip.
-* [ ] Test & write Bulk.
-* [ ] Properly handling when Receiving a RpcError.
+* [ ] Test Bulk.
+* [ ] Add more test to get a 100%-ish testing coverage.

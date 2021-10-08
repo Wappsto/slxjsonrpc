@@ -40,6 +40,7 @@ setup(
     packages=find_packages(),
     tests_require=[
         'pytest',
+        'tox'
     ],
     install_requires=[
        'pydantic>=1.6.1'
