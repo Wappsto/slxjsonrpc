@@ -118,9 +118,13 @@ class TestSlxJsonRpc:
             [-32600, "[]"],
             [-32600, '{"foo": "boo"}'],
             [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!", "id": "1q"}'],
+            [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!"}'],
             [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1", "params": "NOP!"}'],
+            [-32602, '{"jsonrpc": "2.0", "method": "add", "params": "NOP!"}'],
             [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1"}'],
+            [-32602, '{"jsonrpc": "2.0", "method": "add"}'],
             [-32000, '{"jsonrpc": "2.0", "method": "crash", "id": "12342"}'],
+            [-32000, '{"jsonrpc": "2.0", "method": "crash"}'],
             # [-32099, ''],
         ]
     )
@@ -130,35 +134,27 @@ class TestSlxJsonRpc:
         print(f"{s_data}")
         assert s_data.error.code.value == error_code
 
-    # @pytest.mark.parametrize(
-    #     "error_code, transformer",
-    #     [
-    #         [-32600, lambda data: {n: v for (n, v) in data.items() if n != 'result'}],
-    #         # [-32600, lambda data: {n: v for (n, v) in data.items() if n != 'id'}],
-    #         [-32600, lambda data: {n: v for (n, v) in data.items() if n != 'jsonrpc'}],
-    #         [-32700, lambda data: json.dumps(data)[:-10]],
-    #         [-32700, lambda data: None],
-    #         [-32700, lambda data: None],
-    #         [-32700, lambda data: None],
-    #         [-32700, lambda data: None],
-    #     ]
-    # )
-    # def test_return_types(self, error_code, transformer):
-    #     """Testing if the return type is the right one."""
-    #     error_obj = None
+    @pytest.mark.skip(reason="The test is not make yet!")
+    @pytest.mark.parametrize(
+        "error_code, transformer",
+        [(1, 2)]
+    )
+    def test_return_types(self, error_code, transformer):
+        """Testing if the return type is the right one."""
+        error_obj = None
 
-    #     def set_data(temp):
-    #         nonlocal error_obj
-    #         error_obj = temp
+        def set_data(temp):
+            nonlocal error_obj
+            error_obj = temp
 
-    #     c_data = self.client.create_request()
-    #     s_data = self.server.parser(c_data.json(exclude_none=True))
-    #     e_data = transformer(s_data)
-    #     r_data = self.client.parser(e_data)
+        c_data = self.client.create_request()
+        s_data = self.server.parser(c_data.json(exclude_none=True))
+        e_data = transformer(s_data)
+        r_data = self.client.parser(e_data)
 
-    #     assert r_data is None
+        assert r_data is None
 
-    #     assert error_obj.code.value == error_code
+        assert error_obj.code.value == error_code
 
     @pytest.mark.parametrize(
         "method,params",
@@ -220,13 +216,45 @@ class TestSlxJsonRpc:
         assert data_obj is None
         assert error_obj.code.value == error_code
 
-    # def test_bulk(self, method, params, result):
-    #     """Test is the Bulking works as intended."""
-    #     pass
+    # @pytest.mark.skip(reason="The test is not make yet!")
+    def test_bulk(self):
+        """Test is the Bulking works as intended."""
+        c_data = self.client.create_request(
+            method=MethodsTest.crash,
+            callback=lambda data: None,
+            error_callback=lambda data: None
+        )
+        with self.server.batch():
+            s_data = self.server.parser(c_data.json(exclude_none=True))
+            assert s_data is None
+            s_data = self.server.create_request(
+                method=MethodsTest.crash,
+                callback=lambda data: None,
+            )
+            assert s_data is None
 
-    #         [-32099, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-    #                                {"code": -32099, "message": "", "data": "k"}
-    #                                }],
-    # # def test_custom_error_response(self):
-    # #     """Test if the custom error response works as intended."""
-    # #     pass
+            s_data = self.server.create_notification(
+                method=MethodsTest.ping,
+            )
+            assert s_data is None
+
+        assert self.server.bulk_size() == 3
+
+        s_data = self.server.get_batch_data()
+        # print(f"{s_data.json(exclude_none=True)}")
+        self.client.parser(s_data.json(exclude_none=True))
+        # print(data)
+        # assert False
+
+    @pytest.mark.skip(reason="The test is not make yet!")
+    @pytest.mark.parametrize(
+        "error_code, transformer",
+        [
+            [-32099, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
+                                   {"code": -32099, "message": "", "data": "k"}
+                                   }],
+        ],
+    )
+    def test_custom_error_response(self, error_code, transformer):
+        """Test if the custom error response works as intended."""
+        pass

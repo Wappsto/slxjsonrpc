@@ -19,14 +19,14 @@ from pydantic.fields import ModelField
 
 from typing import Any
 from typing import Dict
-from typing import Optional
 from typing import List
+from typing import Optional
 from typing import Union
 
 try:
     # https://github.com/ilevkivskyi/typing_inspect/issues/65
     # NOTE: py36 not a thing, py39 - types.GenericAlias
-    from typing import _GenericAlias as GenericAlias
+    from typing import _GenericAlias as GenericAlias  # type: ignore
 except ImportError:
     GenericAlias = type(List[Any])
 
@@ -79,10 +79,10 @@ class BaseRPC(BaseModel):
 #                             JsonRpc Request Object
 ###############################################################################
 
-params_mapping: Dict[str, Union[type, GenericAlias]] = {}
+params_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
 
 
-def set_params_map(mapping: Dict[str, Union[type, GenericAlias]]) -> None:
+def set_params_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None:
     """Set the method to params schema mapping."""
     global params_mapping
     params_mapping = mapping
@@ -320,5 +320,4 @@ class RpcBatch(BaseModel):
         RpcNotification,
         RpcResponse,
         RpcError,
-        # Any,  # UNSURE:
     ]] = Field(..., min_items=1)

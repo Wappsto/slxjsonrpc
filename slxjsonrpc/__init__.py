@@ -18,4 +18,4 @@ __all__ = [
     'RpcResponse',
 ]
 
-__version__ = "v0.01"
+__version__ = "v0.0.1"

@@ -32,7 +32,17 @@ Known Bugs
 TODO List
 -------------------------------------------------------------------------------
 * [ ] Use case Examples.
-* [ ] Enforce the result Schema.
+* [ ] Enforce the result Schema. schema/jsonrpc.py:217-225
 * [ ] Push to pip.
-* [ ] Test Bulk.
 * [ ] Add more test to get a 100%-ish testing coverage.
+* [ ] Test response with unknown id
+* [ ] Test Request with unknown Method, and method Enum not set. jsonrpc.py:348 schema/jsonrpc.py:131
+* [ ] Test Notification with unknown Method, and method Enum not set. jsonrpc.py:330
+* [ ] Test RpcError, when no Error callback is set.
+* [ ] Test Request, where params set, when they should not be.
+* [ ] Test Notification, where params set, when they should not be.
+
+
+Name                           Stmts   Miss  Cover   Missing
+------------------------------------------------------------
+TOTAL                            277     34    88%
