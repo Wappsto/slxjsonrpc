@@ -1,4 +1,5 @@
-from setuptools import find_packages, setup
+from setuptools import find_packages
+from setuptools import setup
 
 import codecs
 import os
@@ -38,6 +39,10 @@ setup(
         "Operating System :: OS Independent"
     ],
     packages=find_packages(),
+    package_data={
+        'slxjsonrpc': ['jsonrpc.pyi'],
+        'slxjsonrpc/schema': ['schema/jsonrpc.pyi'],
+    },
     tests_require=[
         'pytest',
         'tox'
