@@ -41,8 +41,3 @@ TODO List
 * [ ] Test RpcError, when no Error callback is set.
 * [ ] Test Request, where params set, when they should not be.
 * [ ] Test Notification, where params set, when they should not be.
-
-
-Name                           Stmts   Miss  Cover   Missing
-------------------------------------------------------------
-TOTAL                            277     34    88%

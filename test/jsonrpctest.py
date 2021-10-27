@@ -8,7 +8,7 @@ from typing import Union
 
 import pytest
 
-from slxjsonrpc import SlxJsonRpc
+import slxjsonrpc
 
 
 class MethodsTest(str, Enum):
@@ -18,6 +18,7 @@ class MethodsTest(str, Enum):
     sub = "sub"
     crash = "crash"
     tweet = "tweet"
+    error = "error"
 
 
 class TestSlxJsonRpc:
@@ -26,9 +27,16 @@ class TestSlxJsonRpc:
     def setup_method(self):
         """Setup the server & client instances of SlxJsonRpc."""
         self.tweet_data = None
+        self.error_code = 0
 
         def tweeting(data):
             self.tweet_data = data
+
+        def custom_error(*args, **kwargs):
+            raise slxjsonrpc.RpcErrorException(
+                code=self.error_code,
+                msg="Just some Error!"
+            )
 
         params = {
             MethodsTest.add: List[Union[int, float]],
@@ -36,13 +44,15 @@ class TestSlxJsonRpc:
             MethodsTest.ping: None,
             MethodsTest.crash: None,
             MethodsTest.tweet: Any,
+            MethodsTest.error: Any,
         }
         result = {
             MethodsTest.add: Union[int, float],
             MethodsTest.sub: Union[int, float],
             MethodsTest.ping: str,  # Literal["pong"]
             MethodsTest.crash: int,
-            MethodsTest.tweet: None
+            MethodsTest.tweet: None,
+            MethodsTest.error: None,
         }
         method_map = {
             MethodsTest.add: lambda data: sum(data),
@@ -50,14 +60,15 @@ class TestSlxJsonRpc:
             MethodsTest.ping: lambda data: "pong",
             MethodsTest.crash: lambda *args: "*beep*" - 42,
             MethodsTest.tweet: lambda data: tweeting(data),
+            MethodsTest.error: custom_error,
         }
-        self.server = SlxJsonRpc(
+        self.server = slxjsonrpc.SlxJsonRpc(
             methods=MethodsTest,
             result=result,
             params=params,
             method_cb=method_map
         )
-        self.client = SlxJsonRpc(
+        self.client = slxjsonrpc.SlxJsonRpc(
             methods=MethodsTest,
             result=result,
             params=params,
@@ -216,7 +227,6 @@ class TestSlxJsonRpc:
         assert data_obj is None
         assert error_obj.code.value == error_code
 
-    # @pytest.mark.skip(reason="The test is not make yet!")
     def test_bulk(self):
         """Test is the Bulking works as intended."""
         c_data = self.client.create_request(
@@ -246,15 +256,16 @@ class TestSlxJsonRpc:
         # print(data)
         # assert False
 
-    @pytest.mark.skip(reason="The test is not make yet!")
+    # @pytest.mark.skip(reason="The test is not make yet!")
     @pytest.mark.parametrize(
-        "error_code, transformer",
-        [
-            [-32099, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32099, "message": "", "data": "k"}
-                                   }],
-        ],
+        "error_code",
+        # list(range(-32099, -32000 + 1)),
+        [-32099, -32050, -32000],
     )
-    def test_custom_error_response(self, error_code, transformer):
+    def test_custom_error_response(self, error_code):
         """Test if the custom error response works as intended."""
-        pass
+        self.error_code = error_code
+        msg = '{"jsonrpc": "2.0", "method": "error", "id": "12342"}'
+        error_obj = self.client.parser(msg)
+        obj_code = error_obj.error.code if isinstance(error_obj.error.code, int) else error_obj.error.code.value
+        assert obj_code == error_code

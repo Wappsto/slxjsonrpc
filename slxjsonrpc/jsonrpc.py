@@ -330,7 +330,12 @@ class SlxJsonRpc:
 
             return parse_obj_as(RpcBatch, b_data)
 
-        p_data = self._parse_data(j_data)
+        try:
+            p_data = self._parse_data(j_data)
+        except RpcErrorException as err:
+            return self._batch_filter(err.get_rpc_model(
+                id=j_data['id'] if 'id' in j_data else None,
+            ))
         return self.__reply_logic(p_data)
 
     def __reply_logic(
@@ -413,6 +418,7 @@ class SlxJsonRpc:
         if data.id not in self._id_cb.keys():
             self.log.warning(f"Received an unknown RpcResponse: {data}")
         else:
+            self._id_ecb.pop(data.id, None)
             with self._except_handler():
                 self._id_cb.pop(data.id)(data.result)
 
