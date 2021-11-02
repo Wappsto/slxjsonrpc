@@ -25,7 +25,7 @@ def rpc_set_name(name: Optional[str]) -> None: ...
 def rpc_get_name() -> Optional[str]: ...
 
 
-def _id_gen() -> str: ...
+def _id_gen(name: Optional[Union[str, int, float]] = None) -> str: ...
 
 
 class RpcVersion(str, Enum):
@@ -83,6 +83,16 @@ class RpcNotification(BaseModel):
 ###############################################################################
 #                          JsonRpc Response Object
 ###############################################################################
+
+result_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
+id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
+
+
+def set_result_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None: ...
+
+
+def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None: ...
+
 
 class RpcResponse(BaseModel):
     jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0

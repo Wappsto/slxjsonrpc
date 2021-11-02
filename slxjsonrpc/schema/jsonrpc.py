@@ -36,7 +36,7 @@ _session_id: str = "".join(
     random.choices(string.ascii_letters + string.digits, k=10)
 )
 
-_RpcName: Optional[str] = "JsonRpc"
+_RpcName: Optional[str] = None
 
 
 def rpc_set_name(name: Optional[str]) -> None:
@@ -51,28 +51,19 @@ def rpc_get_name() -> Optional[str]:
     return _RpcName
 
 
-def _id_gen() -> str:
+def _id_gen(name: Optional[Union[str, int, float]] = None) -> str:
     """Create an unique Rpc-id."""
     global _session_count
     global _session_id
     global _RpcName
+    rpc_name = name if name else _RpcName
     _session_count += 1
-    return f"{_session_id}_{_RpcName}_{_session_count}"
+    return f"{_session_id}_{rpc_name}_{_session_count}"
 
 
 class RpcVersion(str, Enum):
     """The supported JsonRpc versions."""
     v2_0 = "2.0"
-
-
-class BaseRPC(BaseModel):
-    """The Base class for the RpcRequest, RpcResponse & RpcError schemas."""
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
-    id: Optional[Union[str, int]] = None
-
-    class Config:
-        """Enforce that there can not be added extra keys to the BaseModel."""
-        extra = Extra.forbid
 
 
 ###############################################################################
@@ -88,7 +79,7 @@ def set_params_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -
     params_mapping = mapping
 
 
-class RpcRequest(BaseRPC):
+class RpcRequest(BaseModel):
     """
     The Standard JsonRpc Request Schema, used to do a request of the server.
 
@@ -98,16 +89,15 @@ class RpcRequest(BaseRPC):
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     method: str
+    id: Optional[Union[str, int]] = None
     params: Optional[Any]
 
     @validator('id', pre=True, always=True)
-    def id_autofill(cls, v) -> str:
+    def id_autofill(cls, v, values, **kwargs) -> str:
         """Validate the id, and auto-fill it is not set."""
-        if rpc_get_name() is ...:
-            rpc_set_name(v)
-            return _id_gen()
-        return v or _id_gen()
+        return v or _id_gen(name=rpc_get_name() or values.get('method'))
 
     @classmethod
     def update_method(cls, new_type: Enum) -> None:
@@ -194,6 +184,23 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
+result_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
+
+id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
+
+
+def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None:
+    """Set the id to method mapping."""
+    global id_mapping
+    id_mapping = mapping
+
+
+def set_result_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None:
+    """Set the method to params schema mapping."""
+    global result_mapping
+    result_mapping = mapping
+
+
 class RpcResponse(BaseModel):
     """
     The Standard JsonRpc Response Schema, that is responded with.
@@ -211,18 +218,32 @@ class RpcResponse(BaseModel):
         """Enforce that there can not be added extra keys to the BaseModel."""
         extra = Extra.forbid
 
-    @classmethod
-    def update_result(cls, new_type: GenericAlias) -> None:
-        """Update the Method schema, to fit the new schema."""
-        new_fields = ModelField.infer(
-            name="result",
-            value=...,
-            annotation=new_type,
-            class_validators=None,
-            config=cls.__config__
-        )
-        cls.__fields__['result'] = new_fields
-        cls.__annotations__['result'] = new_type
+    @validator("result", pre=True, always=True)
+    def method_params_mapper(cls, v, values, **kwargs) -> Any:
+        """Check & enforce the params schema, depended on the method value."""
+        global result_mapping
+        global method_id_mapping
+
+        if not result_mapping.keys():
+            return v
+
+        the_id = values.get('id')
+
+        if the_id not in id_mapping:
+            # UNSURE (MBK): What should done, when it was not ment for this receiver?
+            return v
+
+        the_method = id_mapping[the_id]
+
+        if the_method not in result_mapping.keys():
+            raise ValueError(f"Not valid params for method: {values.get('method')}.")
+
+        model = result_mapping[the_method]
+        if model is not None:
+            return parse_obj_as(model, v)
+
+        if v:
+            raise ValueError("result should not be set.")
 
 
 ###############################################################################
@@ -297,7 +318,7 @@ class ErrorModel(BaseModel):
         extra = Extra.forbid
 
 
-class RpcError(BaseRPC):
+class RpcError(BaseModel):
     """
     The default JsonRpc Error Reply Schema.
 
@@ -306,6 +327,8 @@ class RpcError(BaseRPC):
         id:
         error:
     """
+    id: Optional[Union[str, int]] = None
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     error: ErrorModel
 
 
