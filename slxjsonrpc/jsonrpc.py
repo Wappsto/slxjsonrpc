@@ -34,6 +34,8 @@ from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
 from slxjsonrpc.schema.jsonrpc import rpc_set_name
 from slxjsonrpc.schema.jsonrpc import RpcVersion
 from slxjsonrpc.schema.jsonrpc import set_params_map
+from slxjsonrpc.schema.jsonrpc import set_result_map
+from slxjsonrpc.schema.jsonrpc import set_id_mapping
 
 RpcSchemas = Union[
     RpcError,
@@ -128,12 +130,14 @@ class SlxJsonRpc:
         self.log = logging.getLogger(__name__)
         self.log.addHandler(logging.NullHandler())
 
-        rpc_set_name(...)
+        rpc_set_name(None)
         if methods:
             RpcRequest.update_method(methods)
             RpcNotification.update_method(methods)
         if params:
             set_params_map(params)
+        if result:
+            set_result_map(result)
 
         self.__batch_lock: int = 0
         self.__batched_list: List[RpcSchemas] = []
@@ -144,6 +148,8 @@ class SlxJsonRpc:
         self._id_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_ecb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_method: Dict[Union[str, int, None], Union[Enum, str]] = {}
+
+        set_id_mapping(self._id_method)
 
     def create_request(
         self,
@@ -188,8 +194,6 @@ class SlxJsonRpc:
             self._id_ecb[r_data.id] = error_callback
         self._id_method[r_data.id] = method
 
-        self.log.debug(f"Request Package Created:{r_data}")
-
         return self._batch_filter(r_data)
 
     def create_notification(
@@ -220,7 +224,7 @@ class SlxJsonRpc:
             method=method,
             params=params
         )
-        self.log.debug(f"Request Package Created:{r_data}")
+
         return self._batch_filter(r_data)
 
     # -------------------------------------------------------------------------
@@ -271,7 +275,6 @@ class SlxJsonRpc:
         if not self.__batch_lock:
             return data
 
-        self.log.debug(f"Batching of package: {data}")
         self.__batched_list.append(data)
         return None
 
@@ -288,9 +291,6 @@ class SlxJsonRpc:
 
         For the Parsed data, there will be check for any subscriptions,
         if found, this callback will be called, and given the data.
-
-        TODO: Handle a received RpcError.
-        TODO: Add to batched_list, instead of return, when in batch scope.
 
         Args:
             data: The Raw data to be parsed.
@@ -315,13 +315,12 @@ class SlxJsonRpc:
             return self._batch_filter(RpcError(
                 id=None,
                 error=ErrorModel(
-                    code=RpcErrorCode.InvalidRequest,  # UNSURE: RpcErrorCode.ServerError
-                    message=RpcErrorMsg.InvalidRequest,  # UNSURE: RpcErrorMsg.ServerError
+                    code=RpcErrorCode.InvalidRequest,
+                    message=RpcErrorMsg.InvalidRequest,
                 )
             ))
 
         if isinstance(j_data, list):
-            # TODO (MBK): Handle RpcBatch list, parse each single one for itself & Batch them.
             b_data: List[Union[RpcError, RpcResponse]] = []
             for f_data in j_data:
                 temp = self.__reply_logic(self._parse_data(f_data))
@@ -365,8 +364,8 @@ class SlxJsonRpc:
             return self._batch_filter(RpcError(
                 id=p_data.id if hasattr(p_data, 'id') else None,
                 error=ErrorModel(
-                    code=RpcErrorCode.InternalError,  # UNSURE: RpcErrorCode.ServerError
-                    message=RpcErrorMsg.InternalError,  # UNSURE: RpcErrorMsg.ServerError
+                    code=RpcErrorCode.InternalError,
+                    message=RpcErrorMsg.InternalError,
                     data=err.args[0]
                 )
             ))
@@ -381,7 +380,9 @@ class SlxJsonRpc:
             self.log.warning(f"Unhanded error: {data}")
         else:
             with self._except_handler():
-                self._id_ecb.pop(data.id)(data.error)
+                cb = self._id_ecb.pop(data.id)
+                self.log.debug(f"Exec Error CB: {cb}")
+                cb(data.error)
 
     def _notification_reply_logic(self, data):
         if data.method not in self._method_cb.keys():
@@ -394,12 +395,16 @@ class SlxJsonRpc:
                 )
             ))
         with self._except_handler():
-            self._method_cb[data.method](data.params)
+            cb = self._method_cb[data.method]
+            self.log.debug(f"Exec Notification CB: {cb}")
+            cb(data.params)
 
     def _request_reply_logic(self, data):
         if data.method in self._method_cb.keys():
             with self._except_handler():
-                result = self._method_cb[data.method](data.params)
+                cb = self._method_cb[data.method]
+                self.log.debug(f"Request CB: {cb}")
+                result = cb(data.params)
             return self._batch_filter(RpcResponse(
                 id=data.id,
                 jsonrpc=RpcVersion.v2_0,
@@ -420,7 +425,9 @@ class SlxJsonRpc:
         else:
             self._id_ecb.pop(data.id, None)
             with self._except_handler():
-                self._id_cb.pop(data.id)(data.result)
+                cb = self._id_cb.pop(data.id)
+                self.log.debug(f"Exec Response CB: {cb}")
+                cb(data.result)
 
     @contextmanager
     def _except_handler(self):
@@ -429,9 +436,10 @@ class SlxJsonRpc:
         except RpcErrorException:
             raise
         except Exception as err:
+            # NOTE: Only trickered from user given function, or if it was not a function
             raise RpcErrorException(
-                code=RpcErrorCode.ServerError,  # UNSURE: RpcErrorCode.InternalError
-                msg=RpcErrorMsg.ServerError,  # UNSURE: RpcErrorMsg.InternalError
+                code=RpcErrorCode.ServerError,
+                msg=RpcErrorMsg.ServerError,
                 data=err.args[0]
             ).with_traceback(err.__traceback__)
 
@@ -439,7 +447,7 @@ class SlxJsonRpc:
         self,
         errors: List[Dict[str, Union[List[str], str, Dict[str, List[str]]]]]
     ) -> Optional[ErrorModel]:
-        # Find a faster way to do this!
+        # TODO (MBK): Find a faster/better way to do this!
         method_error = list(filter(lambda x: x.get('type') == "type_error.enum", errors))
         params_error = list(filter(lambda x: x.get('loc') == ('__root__', 'params', '__root__'), errors))
         type_error = list(filter(lambda x: x.get('type') in ["value_error.missing", "value_error.extra"], errors))

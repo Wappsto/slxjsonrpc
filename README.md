@@ -17,6 +17,10 @@ The slxjsonrpc package can be installed using PIP (Python Package Index) as foll
 $ pip install slxjsonrpc
 ```
 
+### Use case Examples
+
+
+
 License
 -------------------------------------------------------------------------------
 
@@ -26,13 +30,14 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LIC
 
 Known Bugs
 -------------------------------------------------------------------------------
-* Can not receive a Bulked JsonRpc List. Yet.
+...
 
 
 TODO List
 -------------------------------------------------------------------------------
 * [ ] Use case Examples.
-* [ ] Enforce the result Schema. schema/jsonrpc.py:217-225
+* [ ] Add more/better logging logs.
+* [x] Enforce the result Schema. schema/jsonrpc.py:217-225
 * [ ] Push to pip.
 * [ ] Add more test to get a 100%-ish testing coverage.
 * [ ] Test response with unknown id

@@ -145,7 +145,7 @@ class TestSlxJsonRpc:
         print(f"{s_data}")
         assert s_data.error.code.value == error_code
 
-    @pytest.mark.skip(reason="The test is not make yet!")
+    @pytest.mark.skip(reason="TBW!")
     @pytest.mark.parametrize(
         "error_code, transformer",
         [(1, 2)]
