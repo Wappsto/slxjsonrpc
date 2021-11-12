@@ -146,7 +146,7 @@ class SlxJsonRpc:
 
         # Workaround   # type: ignore for the Dict-keys to be None.
         self._id_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
-        self._id_ecb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
+        self._id_error_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_method: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
         set_id_mapping(self._id_method)
@@ -191,7 +191,7 @@ class SlxJsonRpc:
 
         self._id_cb[r_data.id] = callback
         if error_callback:
-            self._id_ecb[r_data.id] = error_callback
+            self._id_error_cb[r_data.id] = error_callback
         self._id_method[r_data.id] = method
 
         return self._batch_filter(r_data)
@@ -246,7 +246,7 @@ class SlxJsonRpc:
 
     def get_batch_data(
         self,
-        data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]
+        data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]] = None
     ) -> Optional[Union[RpcBatch, RpcRequest, RpcNotification, RpcError, RpcResponse]]:
         """
         Retrieve the Bulked packages.
@@ -338,10 +338,20 @@ class SlxJsonRpc:
         if isinstance(j_data, list):
             b_data: List[Union[RpcError, RpcResponse]] = []
             for f_data in j_data:
-                temp = self.__reply_logic(self._parse_data(f_data))
+                try:
+                    temp = self._parse_data(f_data)
+                except RpcErrorException as err:
+                    b_data.append(err.get_rpc_model(
+                        id=f_data['id'] if 'id' in f_data else None,
+                    ))
+                    continue
                 if temp:
-                    b_data.append(temp)
+                    r_data = self.__reply_logic(temp)
+                    if r_data:
+                        b_data.append(r_data)
+                # UNSURE: Is it requerid to return a batch of 1, if it was received as batch of 1?
 
+            print(f"{b_data}")
             return parse_obj_as(RpcBatch, b_data) if b_data else None
 
         try:
@@ -389,13 +399,14 @@ class SlxJsonRpc:
 
     def _error_reply_logic(self, data):
         if data.id not in self._id_cb.keys():
+            # NOTE: Triggers only if it was an error that we generated.
             return data
         self._id_cb.pop(data.id)
-        if data.id not in self._id_ecb.keys():
+        if data.id not in self._id_error_cb.keys():
             self.log.warning(f"Unhanded error: {data}")
         else:
             with self._except_handler():
-                cb = self._id_ecb.pop(data.id)
+                cb = self._id_error_cb.pop(data.id)
                 self.log.debug(f"Exec Error CB: {cb}")
                 cb(data.error)
 
@@ -438,7 +449,7 @@ class SlxJsonRpc:
         if data.id not in self._id_cb.keys():
             self.log.warning(f"Received an unknown RpcResponse: {data}")
         else:
-            self._id_ecb.pop(data.id, None)
+            self._id_error_cb.pop(data.id, None)
             with self._except_handler():
                 cb = self._id_cb.pop(data.id)
                 self.log.debug(f"Exec Response CB: {cb}")

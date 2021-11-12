@@ -248,7 +248,7 @@ class TestSlxJsonRpc:
             )
             assert s_data is None
 
-        assert self.server.bulk_size() == 3
+        assert self.server.batch_size() == 3
 
         s_data = self.server.get_batch_data()
         # print(f"{s_data.json(exclude_none=True)}")
