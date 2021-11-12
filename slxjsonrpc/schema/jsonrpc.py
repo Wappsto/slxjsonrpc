@@ -94,6 +94,10 @@ class RpcRequest(BaseModel):
     id: Optional[Union[str, int]] = None
     params: Optional[Any]
 
+    class Config:
+        """Enforce that there can not be added extra keys to the BaseModel."""
+        extra = Extra.forbid
+
     @validator('id', pre=True, always=True)
     def id_autofill(cls, v, values, **kwargs) -> str:
         """Validate the id, and auto-fill it is not set."""
@@ -263,9 +267,9 @@ class RpcErrorCode(Enum):
 
         -32602      Invalid params      Invalid method parameter(s).
         -32603      Internal error      Internal JSON-RPC error.
-        -32000      Server error        IconServiceEngine internal error.
+        -32000      Server error        Internal error.
           ...
-        -32099      Server error        IconServiceEngine internal error.
+        -32099      Server error        Internal error.
     """
     ParseError = -32700
     InvalidRequest = -32600
@@ -288,9 +292,9 @@ class RpcErrorMsg(str, Enum):
 
         -32602      Invalid params      Invalid method parameter(s).
         -32603      Internal error      Internal JSON-RPC error.
-        -32000      Server error        IconServiceEngine internal error.
+        -32000      Server error        Internal error.
           ...
-        -32099      Server error        IconServiceEngine internal error.
+        -32099      Server error        Internal error.
     """
     ParseError = "Invalid JSON was received by the server."
     InvalidRequest = "The JSON sent is not a valid Request object."
