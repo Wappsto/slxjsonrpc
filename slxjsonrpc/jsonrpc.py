@@ -240,14 +240,14 @@ class SlxJsonRpc:
         finally:
             self.__batch_lock -= 1
 
-    def bulk_size(self) -> int:
+    def batch_size(self) -> int:
         """Retrieve the number of packages in the Bulk."""
         return len(self.__batched_list)
 
     def get_batch_data(
         self,
         data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]
-    ) -> Optional[RpcBatch]:
+    ) -> Optional[Union[RpcBatch, RpcRequest, RpcNotification, RpcError, RpcResponse]]:
         """
         Retrieve the Bulked packages.
 
@@ -264,6 +264,8 @@ class SlxJsonRpc:
             self.__batched_list.append(data)
         sdata = self.__batched_list.copy()
         self.__batched_list.clear()
+        if len(sdata) == 1:
+            return sdata
         return parse_obj_as(RpcBatch, sdata)
 
     def _batch_filter(
@@ -292,7 +294,7 @@ class SlxJsonRpc:
 
     def parser(
         self,
-        data: Union[bytes, str, dict]
+        data: Union[bytes, str, dict, list]
     ) -> Optional[Union[RpcError, RpcResponse, List[Union[RpcError, RpcResponse]]]]:
         """
         Parse raw JsonRpc data, & returns the Response or Error.
@@ -308,7 +310,12 @@ class SlxJsonRpc:
             None, if no reply are needed.
         """
         try:
-            j_data: Union[dict, list] = data if isinstance(data, dict) else json.loads(data)
+            j_data: Union[dict, list]
+            if isinstance(data, dict) or isinstance(data, list):
+                j_data = data
+            else:
+                j_data = json.loads(data)
+
         except json.decoder.JSONDecodeError as err:
             return self._batch_filter(RpcError(
                 id=None,
@@ -335,7 +342,7 @@ class SlxJsonRpc:
                 if temp:
                     b_data.append(temp)
 
-            return parse_obj_as(RpcBatch, b_data)
+            return parse_obj_as(RpcBatch, b_data) if b_data else None
 
         try:
             p_data = self._parse_data(j_data)
