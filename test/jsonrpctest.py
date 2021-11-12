@@ -256,7 +256,6 @@ class TestSlxJsonRpc:
         # print(data)
         # assert False
 
-    # @pytest.mark.skip(reason="The test is not make yet!")
     @pytest.mark.parametrize(
         "error_code",
         # list(range(-32099, -32000 + 1)),

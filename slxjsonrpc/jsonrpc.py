@@ -244,9 +244,15 @@ class SlxJsonRpc:
         """Retrieve the number of packages in the Bulk."""
         return len(self.__batched_list)
 
-    def get_batch_data(self) -> Optional[RpcBatch]:
+    def get_batch_data(
+        self,
+        data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]
+    ) -> Optional[RpcBatch]:
         """
         Retrieve the Bulked packages.
+
+        Args:
+            data: (Optional) If given the data are added to the end of the batched data.
 
         Returns:
             RpcBatch, if there was batch anything.
@@ -254,9 +260,11 @@ class SlxJsonRpc:
         """
         if len(self.__batched_list) < 1:
             return None
-        data = self.__batched_list.copy()
+        if data:
+            self.__batched_list.append(data)
+        sdata = self.__batched_list.copy()
         self.__batched_list.clear()
-        return parse_obj_as(RpcBatch, data)
+        return parse_obj_as(RpcBatch, sdata)
 
     def _batch_filter(
         self,
