@@ -19,6 +19,109 @@ $ pip install slxjsonrpc
 
 ### Use case Examples
 
+The given use case show how to use the slxJsonRpc Package, and that you have
+a `send` & a `receive` function/method, that is setup.
+
+The Client example code:
+```python
+from typing import List, Union, Literal
+
+from enum import Enum
+import slxjsonrpc
+
+
+def send(data: str) -> None: ...
+
+
+def receive() -> Union[str, bytes, dict]: ...
+
+
+class MethodList(str, Enum):
+    ADD = "add"
+    PING = "ping"
+
+
+params = {
+    MethodList.ADD: List[Union[int, float]],
+    MethodList.PING: None,
+}
+
+result = {
+    MethodList.ADD: Union[int, float],
+    MethodList.PING: Literal["pong"]
+}
+
+client_jsonrpc = slxjsonrpc.SlxJsonRpc(
+    methods=MethodsList,
+    result=result,
+    params=params,
+)
+
+ok = None
+
+
+def reply(reply_data):
+    nonlocal ok
+    ok = reply_data  # Will be "pong"
+
+
+ping_package = client_jsonrpc.create_request(method=MethodList.PING, callback=reply)
+send(ping_package.json(exclude_none=True))
+data = receive()
+client_jsonrpc.parser(data)
+
+print(f"{ok=}")
+```
+
+
+The Server example code:
+```python
+from typing import List, Union, Literal
+
+from enum import Enum
+import slxjsonrpc
+
+
+def send(data: str) -> None: ...
+
+
+def receive() -> Union[str, bytes, dict]: ...
+
+
+class MethodList(str, Enum):
+    ADD = "add"
+    PING = "ping"
+
+
+params = {
+    MethodList.ADD: List[Union[int, float]],
+    MethodList.PING: None,
+}
+
+result = {
+    MethodList.ADD: Union[int, float],
+    MethodList.PING: Literal["pong"]
+}
+
+
+method_map = {
+    MethodList.ADD: lambda data: sum(data),
+    MethodList.PING: lambda data: "pong",
+}
+
+
+server_jsonrpc = slxjsonrpc.SlxJsonRpc(
+    methods=MethodsList,
+    result=result,
+    params=params,
+    method_cb=method_map,
+)
+
+data = receive()
+return_data = server_jsonrpc.parser(data)
+if return_data:
+    send(return_data.json(exclude_none=True))
+```
 
 
 License
@@ -35,10 +138,11 @@ Known Bugs
 
 TODO List
 -------------------------------------------------------------------------------
-* [ ] Use case Examples.
+* [x] Use case Examples.
 * [ ] Add more/better logging logs.
 * [x] Enforce the result Schema. schema/jsonrpc.py:217-225
-* [ ] Push to pip.
+* [x] Push to pip.
+* [ ] Refactor so the same code can have multiple independent slxJsonRpc.
 * [ ] Add more test to get a 100%-ish testing coverage.
 * [ ] Test response with unknown id
 * [ ] Test Request with unknown Method, and method Enum not set. jsonrpc.py:348 schema/jsonrpc.py:131

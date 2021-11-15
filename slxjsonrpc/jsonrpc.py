@@ -55,14 +55,14 @@ class RpcErrorException(Exception):
     Attributes:
         Initializing with a msg & code arguments.
     """
-    def __init__(self, code: int, msg: str, data=None) -> None:
+    def __init__(self, code: int, msg: str, data: Optional[str] = None) -> None:
         """
         Initialize the RpcErrorException with the Rpc Error Response info.
 
         Args:
             code: The Rpc Error code, within the range of -32000 to -32099
             msg: The Rpc Error message, that shortly describe the error for given code.
-            data: The Rpc
+            data: (Optional) The Rpc Extended error message.
         """
         super().__init__()
         self.code = code
@@ -72,6 +72,9 @@ class RpcErrorException(Exception):
     def get_rpc_model(self, id) -> RpcError:
         """
         Returns a RpcError Response, for this given exception.
+
+        The returned RpcError Model are used to send back to server,
+        as a JsonRpc Error package.
 
         Args:
             id: The JsonRpc Id, for which this exception occurred.
@@ -96,8 +99,10 @@ class SlxJsonRpc:
     SlxJsonRpc keep track of the JsonRpc schema, and procedure for each method.
     It also ensures to route each message to where it is expected.
 
-    SlxJsonRpc is build to be both that JsonRpc server & client.
+    SlxJsonRpc is build to fill both the JsonRpc server & client roll.
     To enable the JsonRpc-server, the method_cb need to be given.
+
+
     """
 
     def __init__(
@@ -233,7 +238,7 @@ class SlxJsonRpc:
 
     @contextmanager
     def batch(self):
-        """Batch all RPC's called within the scope, into one RPC-Batch-List."""
+        """Batch RPC's within the context manager, into one RPC-Batch-List."""
         self.__batch_lock += 1
         try:
             yield
@@ -251,6 +256,10 @@ class SlxJsonRpc:
         """
         Retrieve the Bulked packages.
 
+        The returned Package, will be a RpcBatch,
+        unless it was empty, where it will return `None`, or
+        it only contain one package, then that will be returned instead.
+
         Args:
             data: (Optional) If given the data are added to the end of the batched data.
 
@@ -265,7 +274,7 @@ class SlxJsonRpc:
         sdata = self.__batched_list.copy()
         self.__batched_list.clear()
         if len(sdata) == 1:
-            return sdata
+            return sdata[0]
         return parse_obj_as(RpcBatch, sdata)
 
     def _batch_filter(
@@ -299,8 +308,13 @@ class SlxJsonRpc:
         """
         Parse raw JsonRpc data, & returns the Response or Error.
 
-        For the Parsed data, there will be check for any subscriptions,
-        if found, this callback will be called, and given the data.
+        For the Parsed data, there will be make a check for any method
+        callbacks, if found, the callback(s) will be called for the given data,
+        and the return value from the callback will be packed into, a jsonrpc
+        response package, and returned here.
+
+        Everything returned from this method, should be passed on to the
+        receiver, if not `None`.
 
         Args:
             data: The Raw data to be parsed.
