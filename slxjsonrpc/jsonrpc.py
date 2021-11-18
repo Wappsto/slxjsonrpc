@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Standalone JsonRpc module."""
 import json
 import logging
@@ -149,7 +150,6 @@ class SlxJsonRpc:
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
-        # Workaround   # type: ignore for the Dict-keys to be None.
         self._id_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_error_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_method: Dict[Union[str, int, None], Union[Enum, str]] = {}
@@ -406,13 +406,13 @@ class SlxJsonRpc:
 
         except RpcErrorException as err:
             return self._batch_filter(err.get_rpc_model(
-                id=p_data.id if hasattr(p_data, 'id') else None,
+                id=getattr(p_data, 'id', None),
             ))
 
         except Exception as err:
             print(f"Normal: {err}")  # TODO: Testing needed to trigger this!
             return self._batch_filter(RpcError(
-                id=p_data.id if hasattr(p_data, 'id') else None,
+                id=getattr(p_data, 'id', None),
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
                     message=RpcErrorMsg.InternalError,
