@@ -126,6 +126,8 @@ class ErrorModel(BaseModel):
 
 
 class RpcError(BaseModel):
+    id: Union[str, int, None] = None
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     error: ErrorModel
 
 

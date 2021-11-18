@@ -69,7 +69,7 @@ class RpcErrorException(Exception):
         self.msg = msg
         self.data = data
 
-    def get_rpc_model(self, id: Union[str, int]) -> RpcError:
+    def get_rpc_model(self, id: Union[str, int, None]) -> RpcError:
         """
         Returns a RpcError Response, for this given exception.
 

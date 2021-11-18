@@ -325,7 +325,7 @@ class RpcError(BaseModel):
         id:
         error:
     """
-    id: Optional[Union[str, int]] = None
+    id: Union[str, int, None] = None
     jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     error: ErrorModel
 
