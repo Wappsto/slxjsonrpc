@@ -9,6 +9,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import overload
 from typing import Type
 from typing import Union
 
@@ -276,10 +277,22 @@ class SlxJsonRpc:
             return sdata[0]
         return parse_obj_as(RpcBatch, sdata)
 
+    @overload
+    def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...
+
+    @overload
+    def _batch_filter(self, data: RpcNotification) -> Optional[RpcNotification]: ...
+
+    @overload
+    def _batch_filter(self, data: RpcResponse) -> Optional[RpcResponse]: ...
+
+    @overload
+    def _batch_filter(self, data: RpcRequest) -> Optional[RpcRequest]: ...
+
     def _batch_filter(
         self,
-        data: Union[RpcRequest, RpcNotification, RpcError, RpcResponse],
-    ) -> Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]:
+        data: RpcSchemas,
+    ) -> Optional[RpcSchemas]:
         """
         Check if batch is enabled, and return the right reply.
 
