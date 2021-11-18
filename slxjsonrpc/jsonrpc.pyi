@@ -16,6 +16,7 @@ from slxjsonrpc.schema.jsonrpc import RpcRequest
 from slxjsonrpc.schema.jsonrpc import RpcResponse
 
 from slxjsonrpc.schema.jsonrpc import ErrorModel
+from slxjsonrpc.schema.jsonrpc import RpcErrorCode
 
 
 JsonSchemas: Union[
@@ -27,8 +28,13 @@ JsonSchemas: Union[
 
 
 class RpcErrorException(Protocol):
-    def __init__(self, code: int, msg: str, data=None) -> None: ...
-    def get_rpc_model(self, id) -> RpcError: ...
+    def __init__(
+        self,
+        code: Union[int, RpcErrorCode],
+        msg: str,
+        data: Optional[Any] = None
+    ) -> None: ...
+    def get_rpc_model(self, id: Union[str, int]) -> RpcError: ...
 
 
 class SlxJsonRpc(Protocol):

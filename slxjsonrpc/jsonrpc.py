@@ -27,7 +27,6 @@ from slxjsonrpc.schema.jsonrpc import ErrorModel
 from slxjsonrpc.schema.jsonrpc import RpcErrorCode
 from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
 from slxjsonrpc.schema.jsonrpc import rpc_set_name
-from slxjsonrpc.schema.jsonrpc import RpcVersion
 from slxjsonrpc.schema.jsonrpc import set_params_map
 from slxjsonrpc.schema.jsonrpc import set_result_map
 from slxjsonrpc.schema.jsonrpc import set_id_mapping
@@ -50,7 +49,12 @@ class RpcErrorException(Exception):
     Attributes:
         Initializing with a msg & code arguments.
     """
-    def __init__(self, code: int, msg: str, data: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        code: Union[int, RpcErrorCode],
+        msg: str,
+        data: Optional[Any] = None
+    ) -> None:
         """
         Initialize the RpcErrorException with the Rpc Error Response info.
 
@@ -64,7 +68,7 @@ class RpcErrorException(Exception):
         self.msg = msg
         self.data = data
 
-    def get_rpc_model(self, id) -> RpcError:
+    def get_rpc_model(self, id: Union[str, int]) -> RpcError:
         """
         Returns a RpcError Response, for this given exception.
 
@@ -299,7 +303,7 @@ class SlxJsonRpc:
     def parser(
         self,
         data: Union[bytes, str, dict, list]
-    ) -> Optional[Union[RpcError, RpcResponse, List[Union[RpcError, RpcResponse]]]]:
+    ) -> Optional[Union[RpcError, RpcResponse, RpcBatch]]:
         """
         Parse raw JsonRpc data, & returns the Response or Error.
 
@@ -441,7 +445,6 @@ class SlxJsonRpc:
                 result = cb(data.params)
             return self._batch_filter(RpcResponse(
                 id=data.id,
-                jsonrpc=RpcVersion.v2_0,
                 result=result
             ))
         return self._batch_filter(RpcError(
