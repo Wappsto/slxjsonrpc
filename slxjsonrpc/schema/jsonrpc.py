@@ -21,14 +21,8 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Type
 from typing import Union
-
-try:
-    # https://github.com/ilevkivskyi/typing_inspect/issues/65
-    # NOTE: py36 not a thing, py39 - types.GenericAlias
-    from typing import _GenericAlias as GenericAlias  # type: ignore
-except ImportError:
-    GenericAlias = type(List[Any])
 
 
 _session_count: int = 0
@@ -70,10 +64,10 @@ class RpcVersion(str, Enum):
 #                             JsonRpc Request Object
 ###############################################################################
 
-params_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
+params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
 
-def set_params_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None:
+def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
     global params_mapping
     params_mapping = mapping
@@ -188,7 +182,7 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-result_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
+result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
 id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
@@ -199,7 +193,7 @@ def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> No
     id_mapping = mapping
 
 
-def set_result_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None:
+def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
     global result_mapping
     result_mapping = mapping

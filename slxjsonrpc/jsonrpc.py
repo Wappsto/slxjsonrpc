@@ -9,13 +9,8 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Type
 from typing import Union
-try:
-    # https://github.com/ilevkivskyi/typing_inspect/issues/65
-    # NOTE: py36 not a thing, py39 - types.GenericAlias
-    from typing import _GenericAlias as GenericAlias  # type: ignore
-except ImportError:
-    GenericAlias = type(List[Any])
 
 from enum import Enum
 
@@ -109,8 +104,8 @@ class SlxJsonRpc:
         self,
         methods: Optional[Enum] = None,
         method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
-        result: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
-        params: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
+        result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
+        params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
     ):
         """
         Initialization of the JsonRpc.
@@ -365,7 +360,6 @@ class SlxJsonRpc:
                         b_data.append(r_data)
                 # UNSURE: Is it requerid to return a batch of 1, if it was received as batch of 1?
 
-            print(f"{b_data}")
             return parse_obj_as(RpcBatch, b_data) if b_data else None
 
         try:
