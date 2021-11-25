@@ -6,7 +6,7 @@ SlxJsonRpc is a JsonRpc helper class, that uses pydantic.
 SlxJsonRpc keep track of the JsonRpc schema, and procedure for each method.
 It also ensures to route each message to where it is expected.
 
-SlxJsonRpc is build to be both that JsonRpc server & client.
+SlxJsonRpc is build to be both a JsonRpc server & client.
 To enable the JsonRpc-server, the method_map need to be given.
 
 ### Installation using pip
@@ -19,8 +19,9 @@ $ pip install slxjsonrpc
 
 ### Use case Examples
 
-The given use case show how to use the slxJsonRpc Package, and that you have
-a `send` & a `receive` function/method, that is setup.
+The given use case show how to use the slxJsonRpc Package.
+It expected that you have a send & a receive function/method to transport
+the Json RPC messages to and from the package.
 
 The Client example code:
 ```python
@@ -70,7 +71,7 @@ send(ping_package.json(exclude_none=True))
 data = receive()
 client_jsonrpc.parser(data)
 
-print(f"{ok=}")
+print(f"OK: {ok}")
 ```
 
 
@@ -130,23 +131,25 @@ License
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
 
 
-
 Known Bugs
 -------------------------------------------------------------------------------
-...
+ * Can not have 2 independent slxJsonRpcs running in same code base.
 
 
 TODO List
 -------------------------------------------------------------------------------
-* [x] Use case Examples.
-* [ ] Add more/better logging logs.
-* [x] Enforce the result Schema. schema/jsonrpc.py:217-225
-* [x] Push to pip.
-* [ ] Refactor so the same code can have multiple independent slxJsonRpc.
-* [ ] Add more test to get a 100%-ish testing coverage.
-* [ ] Test response with unknown id
-* [ ] Test Request with unknown Method, and method Enum not set. jsonrpc.py:348 schema/jsonrpc.py:131
-* [ ] Test Notification with unknown Method, and method Enum not set. jsonrpc.py:330
-* [ ] Test RpcError, when no Error callback is set.
-* [ ] Test Request, where params set, when they should not be.
-* [ ] Test Notification, where params set, when they should not be.
+**Code base**
+ * [ ] Add more/better logging logs.
+ * [x] Enforce the result Schema. schema/jsonrpc.py:217-225
+ * [x] Push to pip.
+ * [ ] Refactor so the same code can have multiple independent slxJsonRpc.
+ * [x] Use case Examples.
+
+**Tests**
+ * [ ] Add more test to get a 100%-ish testing coverage.
+ * [ ] Test Notification with unknown Method, and method Enum not set. jsonrpc.py:330
+ * [ ] Test Notification, where params set, when they should not be.
+ * [ ] Test Request with unknown Method, and method Enum not set. jsonrpc.py:348 schema/jsonrpc.py:131
+ * [ ] Test Request, where params set, when they should not be.
+ * [ ] Test response with unknown id
+ * [ ] Test RpcError, when no Error callback is set.
