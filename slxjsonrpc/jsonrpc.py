@@ -278,16 +278,16 @@ class SlxJsonRpc:
         return parse_obj_as(RpcBatch, sdata)
 
     @overload
-    def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...
+    def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...  # noqa: E704
 
     @overload
-    def _batch_filter(self, data: RpcNotification) -> Optional[RpcNotification]: ...
+    def _batch_filter(self, data: RpcNotification) -> Optional[RpcNotification]: ...  # noqa: E704
 
     @overload
-    def _batch_filter(self, data: RpcResponse) -> Optional[RpcResponse]: ...
+    def _batch_filter(self, data: RpcResponse) -> Optional[RpcResponse]: ...  # noqa: E704
 
     @overload
-    def _batch_filter(self, data: RpcRequest) -> Optional[RpcRequest]: ...
+    def _batch_filter(self, data: RpcRequest) -> Optional[RpcRequest]: ...  # noqa: E704
 
     def _batch_filter(
         self,
