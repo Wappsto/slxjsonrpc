@@ -44,7 +44,7 @@ class RpcRequest(BaseModel):
     params: Optional[Any]
 
     @validator('id', pre=True, always=True)
-    def id_autofill(cls, v) -> str: ...
+    def id_autofill(cls, v, values, **kwargs) -> str: ...
 
     @classmethod
     def update_method(cls, new_type: Enum) -> None: ...
@@ -76,10 +76,10 @@ result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
 
-def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None: ...
-
-
 def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None: ...
+
+
+def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None: ...
 
 
 class RpcResponse(BaseModel):
@@ -90,7 +90,7 @@ class RpcResponse(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    @classmethod
+    @validator("result", pre=True, always=True)
     def method_params_mapper(cls, v, values, **kwargs) -> Any: ...
 
 
