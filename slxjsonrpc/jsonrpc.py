@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Standalone JsonRpc module."""
 import json
 import logging
@@ -9,13 +10,9 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import overload
+from typing import Type
 from typing import Union
-try:
-    # https://github.com/ilevkivskyi/typing_inspect/issues/65
-    # NOTE: py36 not a thing, py39 - types.GenericAlias
-    from typing import _GenericAlias as GenericAlias  # type: ignore
-except ImportError:
-    GenericAlias = type(List[Any])
 
 from enum import Enum
 
@@ -32,7 +29,6 @@ from slxjsonrpc.schema.jsonrpc import ErrorModel
 from slxjsonrpc.schema.jsonrpc import RpcErrorCode
 from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
 from slxjsonrpc.schema.jsonrpc import rpc_set_name
-from slxjsonrpc.schema.jsonrpc import RpcVersion
 from slxjsonrpc.schema.jsonrpc import set_params_map
 from slxjsonrpc.schema.jsonrpc import set_result_map
 from slxjsonrpc.schema.jsonrpc import set_id_mapping
@@ -55,23 +51,31 @@ class RpcErrorException(Exception):
     Attributes:
         Initializing with a msg & code arguments.
     """
-    def __init__(self, code: int, msg: str, data=None) -> None:
+    def __init__(
+        self,
+        code: Union[int, RpcErrorCode],
+        msg: str,
+        data: Optional[Any] = None
+    ) -> None:
         """
         Initialize the RpcErrorException with the Rpc Error Response info.
 
         Args:
             code: The Rpc Error code, within the range of -32000 to -32099
             msg: The Rpc Error message, that shortly describe the error for given code.
-            data: The Rpc
+            data: (Optional) The Rpc Extended error message.
         """
         super().__init__()
         self.code = code
         self.msg = msg
         self.data = data
 
-    def get_rpc_model(self, id) -> RpcError:
+    def get_rpc_model(self, id: Union[str, int, None]) -> RpcError:
         """
         Returns a RpcError Response, for this given exception.
+
+        The returned RpcError Model are used to send back to server,
+        as a JsonRpc Error package.
 
         Args:
             id: The JsonRpc Id, for which this exception occurred.
@@ -96,16 +100,18 @@ class SlxJsonRpc:
     SlxJsonRpc keep track of the JsonRpc schema, and procedure for each method.
     It also ensures to route each message to where it is expected.
 
-    SlxJsonRpc is build to be both that JsonRpc server & client.
+    SlxJsonRpc is build to fill both the JsonRpc server & client roll.
     To enable the JsonRpc-server, the method_cb need to be given.
+
+
     """
 
     def __init__(
         self,
         methods: Optional[Enum] = None,
         method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
-        result: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
-        params: Optional[Dict[Union[Enum, str], Union[type, GenericAlias]]] = None,
+        result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
+        params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
     ):
         """
         Initialization of the JsonRpc.
@@ -144,7 +150,6 @@ class SlxJsonRpc:
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
-        # Workaround   # type: ignore for the Dict-keys to be None.
         self._id_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_error_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_method: Dict[Union[str, int, None], Union[Enum, str]] = {}
@@ -233,7 +238,7 @@ class SlxJsonRpc:
 
     @contextmanager
     def batch(self):
-        """Batch all RPC's called within the scope, into one RPC-Batch-List."""
+        """Batch RPC's within the context manager, into one RPC-Batch-List."""
         self.__batch_lock += 1
         try:
             yield
@@ -251,6 +256,10 @@ class SlxJsonRpc:
         """
         Retrieve the Bulked packages.
 
+        The returned Package, will be a RpcBatch,
+        unless it was empty, where it will return `None`, or
+        it only contain one package, then that will be returned instead.
+
         Args:
             data: (Optional) If given the data are added to the end of the batched data.
 
@@ -265,13 +274,25 @@ class SlxJsonRpc:
         sdata = self.__batched_list.copy()
         self.__batched_list.clear()
         if len(sdata) == 1:
-            return sdata
+            return sdata[0]
         return parse_obj_as(RpcBatch, sdata)
+
+    @overload
+    def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...  # noqa: E704
+
+    @overload
+    def _batch_filter(self, data: RpcNotification) -> Optional[RpcNotification]: ...  # noqa: E704
+
+    @overload
+    def _batch_filter(self, data: RpcResponse) -> Optional[RpcResponse]: ...  # noqa: E704
+
+    @overload
+    def _batch_filter(self, data: RpcRequest) -> Optional[RpcRequest]: ...  # noqa: E704
 
     def _batch_filter(
         self,
-        data: Union[RpcRequest, RpcNotification, RpcError, RpcResponse],
-    ) -> Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]]:
+        data: RpcSchemas,
+    ) -> Optional[RpcSchemas]:
         """
         Check if batch is enabled, and return the right reply.
 
@@ -295,12 +316,17 @@ class SlxJsonRpc:
     def parser(
         self,
         data: Union[bytes, str, dict, list]
-    ) -> Optional[Union[RpcError, RpcResponse, List[Union[RpcError, RpcResponse]]]]:
+    ) -> Optional[Union[RpcError, RpcResponse, RpcBatch]]:
         """
         Parse raw JsonRpc data, & returns the Response or Error.
 
-        For the Parsed data, there will be check for any subscriptions,
-        if found, this callback will be called, and given the data.
+        For the Parsed data, there will be make a check for any method
+        callbacks, if found, the callback(s) will be called for the given data,
+        and the return value from the callback will be packed into, a jsonrpc
+        response package, and returned here.
+
+        Everything returned from this method, should be passed on to the
+        receiver, if not `None`.
 
         Args:
             data: The Raw data to be parsed.
@@ -351,7 +377,6 @@ class SlxJsonRpc:
                         b_data.append(r_data)
                 # UNSURE: Is it requerid to return a batch of 1, if it was received as batch of 1?
 
-            print(f"{b_data}")
             return parse_obj_as(RpcBatch, b_data) if b_data else None
 
         try:
@@ -381,13 +406,13 @@ class SlxJsonRpc:
 
         except RpcErrorException as err:
             return self._batch_filter(err.get_rpc_model(
-                id=p_data.id if hasattr(p_data, 'id') else None,
+                id=getattr(p_data, 'id', None),
             ))
 
         except Exception as err:
             print(f"Normal: {err}")  # TODO: Testing needed to trigger this!
             return self._batch_filter(RpcError(
-                id=p_data.id if hasattr(p_data, 'id') else None,
+                id=getattr(p_data, 'id', None),
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
                     message=RpcErrorMsg.InternalError,
@@ -433,7 +458,6 @@ class SlxJsonRpc:
                 result = cb(data.params)
             return self._batch_filter(RpcResponse(
                 id=data.id,
-                jsonrpc=RpcVersion.v2_0,
                 result=result
             ))
         return self._batch_filter(RpcError(

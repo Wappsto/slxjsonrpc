@@ -1,6 +1,6 @@
 TEST_PATH=./test
 
-USERNAME=SOMETHING
+USERNAME=seluxit
 
 .PHONY: clean-pyc clean-build build
 

@@ -7,16 +7,10 @@ from pydantic import validator
 
 from typing import Any
 from typing import Dict
-from typing import Optional
 from typing import List
+from typing import Optional
+from typing import Type
 from typing import Union
-
-try:
-    # https://github.com/ilevkivskyi/typing_inspect/issues/65
-    # NOTE: py36 not a thing, py39 - types.GenericAlias
-    from typing import _GenericAlias as GenericAlias  # type: ignore
-except ImportError:
-    GenericAlias = type(List[Any])
 
 
 def rpc_set_name(name: Optional[str]) -> None: ...
@@ -33,30 +27,24 @@ class RpcVersion(str, Enum):
     v2_0 = "2.0"
 
 
-class BaseRPC(BaseModel):
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
-    id: Optional[Union[str, int]] = None
-
-    class Config:
-        extra = Extra.forbid
-
-
 ###############################################################################
 #                             JsonRpc Request Object
 ###############################################################################
 
-params_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]
+params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]
 
 
-def set_params_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None: ...
+def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None: ...
 
 
-class RpcRequest(BaseRPC):
+class RpcRequest(BaseModel):
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     method: str
+    id: Optional[Union[str, int]] = None
     params: Optional[Any]
 
     @validator('id', pre=True, always=True)
-    def id_autofill(cls, v) -> str: ...
+    def id_autofill(cls, v, values, **kwargs) -> str: ...
 
     @classmethod
     def update_method(cls, new_type: Enum) -> None: ...
@@ -84,14 +72,14 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-result_mapping: Dict[Union[Enum, str], Union[type, GenericAlias]] = {}
+result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
 
-def set_result_map(mapping: Dict[Union[Enum, str], Union[type, GenericAlias]]) -> None: ...
-
-
 def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None: ...
+
+
+def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None: ...
 
 
 class RpcResponse(BaseModel):
@@ -102,8 +90,8 @@ class RpcResponse(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    @classmethod
-    def update_result(cls, new_type: GenericAlias) -> None: ...
+    @validator("result", pre=True, always=True)
+    def method_params_mapper(cls, v, values, **kwargs) -> Any: ...
 
 
 ###############################################################################
@@ -137,7 +125,9 @@ class ErrorModel(BaseModel):
         extra = Extra.forbid
 
 
-class RpcError(BaseRPC):
+class RpcError(BaseModel):
+    id: Union[str, int, None] = None
+    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
     error: ErrorModel
 
 
