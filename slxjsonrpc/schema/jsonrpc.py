@@ -119,7 +119,7 @@ class RpcRequest(BaseModel):
             return v
 
         if values.get('method') not in params_mapping.keys():
-            raise ValueError(f"Not valid params fro method: {values.get('method')}.")
+            raise ValueError(f"Not valid params for method: {values.get('method')}.")
 
         model = params_mapping[values.get('method')]
         if model is not None:
