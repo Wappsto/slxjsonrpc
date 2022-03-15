@@ -55,6 +55,14 @@ class SlxJsonRpc(Protocol):
         params: Optional[Any] = None,
     ) -> Optional[RpcRequest]: ...
 
+    def _add_result_handling(
+        self,
+        method: Union[Enum, str],
+        _id: Union[str, int, None],
+        callback: Callable[[Any], None],
+        error_callback: Optional[Callable[[ErrorModel], None]] = None,
+    ) -> None: ...
+
     def create_notification(
         self,
         method: Union[Enum, str],

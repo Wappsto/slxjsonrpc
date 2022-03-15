@@ -194,12 +194,29 @@ class SlxJsonRpc:
             params=params
         )
 
-        self._id_cb[r_data.id] = callback
-        if error_callback:
-            self._id_error_cb[r_data.id] = error_callback
-        self._id_method[r_data.id] = method
+        self._add_result_handling(
+            method=method,
+            _id=r_data.id,
+            callback=callback,
+            error_callback=error_callback
+        )
 
         return self._batch_filter(r_data)
+
+    def _add_result_handling(
+        self,
+        method: Union[Enum, str],
+        _id: Union[str, int, None],
+        callback: Callable[[Any], None],
+        error_callback: Optional[Callable[[ErrorModel], None]] = None,
+    ) -> None:
+        """
+        Added handling for when a result comes back.
+        """
+        self._id_cb[_id] = callback
+        if error_callback:
+            self._id_error_cb[_id] = error_callback
+        self._id_method[_id] = method
 
     def create_notification(
         self,
@@ -422,7 +439,7 @@ class SlxJsonRpc:
 
         return None
 
-    def _error_reply_logic(self, data):
+    def _error_reply_logic(self, data: RpcError):
         if data.id not in self._id_cb.keys():
             # NOTE: Triggers only if it was an error that we generated.
             return data
@@ -435,7 +452,7 @@ class SlxJsonRpc:
                 self.log.debug(f"Exec Error CB: {cb}")
                 cb(data.error)
 
-    def _notification_reply_logic(self, data):
+    def _notification_reply_logic(self, data: RpcNotification):
         if data.method not in self._method_cb.keys():
             return self._batch_filter(RpcError(
                 id=None,
@@ -450,7 +467,7 @@ class SlxJsonRpc:
             self.log.debug(f"Exec Notification CB: {cb}")
             cb(data.params)
 
-    def _request_reply_logic(self, data):
+    def _request_reply_logic(self, data: RpcRequest):
         if data.method in self._method_cb.keys():
             with self._except_handler():
                 cb = self._method_cb[data.method]
@@ -469,7 +486,7 @@ class SlxJsonRpc:
             )
         ))
 
-    def _response_reply_logic(self, data):
+    def _response_reply_logic(self, data: RpcResponse):
         if data.id not in self._id_cb.keys():
             self.log.warning(f"Received an unknown RpcResponse: {data}")
         else:
@@ -487,6 +504,7 @@ class SlxJsonRpc:
             raise
         except Exception as err:
             # NOTE: Only trickered from user given function, or if it was not a function
+            self.log.exception("An error happened doing execution of a callback.")
             raise RpcErrorException(
                 code=RpcErrorCode.ServerError,
                 msg=RpcErrorMsg.ServerError,
