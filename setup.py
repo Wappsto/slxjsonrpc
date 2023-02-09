@@ -1,25 +1,36 @@
 from setuptools import find_packages
 from setuptools import setup
 
+import pathlib
 import codecs
 import os
 import re
 
 
+readme_file = pathlib.Path('README.md')
+changelog_file = pathlib.Path('CHANGELOG.md')
+
+here = os.path.abspath(os.path.dirname(__file__))
+
+
 def get_long_description():
     long_description = ""
-    with open("README.md", "r") as file:
+
+    if not readme_file.exists():
+        return ""
+
+    with readme_file.open("r") as file:
         long_description += file.read()
 
     long_description += "\n\n"
 
-    with open("CHANGELOG.md", "r") as file:
+    if not changelog_file.exists():
+        return long_description
+
+    with changelog_file.open("r") as file:
         long_description += file.read()
 
     return long_description
-
-
-here = os.path.abspath(os.path.dirname(__file__))
 
 
 def find_version(*file_paths):
@@ -67,6 +78,7 @@ setup(
         'pytest',
         'tox'
     ],
+    data_files=[('info', [readme_file.name, changelog_file.name])],
     install_requires=[
        'pydantic>=1.6.1'
     ],
