@@ -1,0 +1,5 @@
+include CHANGELOG.md
+include README.md
+include wapptoiot/*.pyi
+include wapptoiot/**/*.pyi
+include wapptoiot/*.typed
