@@ -123,7 +123,7 @@ class SlxJsonRpc:
                     If not given, will there not be make checks for any wrong methods.
             method_cb: The mapping for each given method to a function call. (Server only)
                         callback: The function to be call when data is received.
-                                  The Callback gets the params definded in as args,
+                                  The Callback gets the params defined in as args,
                                   & should return the Result defined.
                                   If an error happens, and custom error code
                                   are needed, to send back, raise the RpcErrorException
@@ -175,7 +175,7 @@ class SlxJsonRpc:
             method: Should be a apart of the given Method Enum, given on init,
                     or if not given, a string.
             callback: The function to be called when data is received.
-                      The Callback gets the Result datamodel (if set)
+                      The Callback gets the Result data model (if set)
                       else a Dict/List back as argument.
             error_callback: (Optional) The function to be called, when an error
                             have happened.
@@ -392,7 +392,7 @@ class SlxJsonRpc:
                     r_data = self.__reply_logic(temp)
                     if r_data:
                         b_data.append(r_data)
-                # UNSURE: Is it requerid to return a batch of 1, if it was received as batch of 1?
+                # UNSURE: Is it required to return a batch of 1, if it was received as batch of 1?
 
             return parse_obj_as(RpcBatch, b_data) if b_data else None
 
