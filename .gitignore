@@ -132,3 +132,6 @@ dmypy.json
 # Sublime Text Editor
 *.sublime-project
 *.sublime-workspace
+
+# VS-Code
+*.code-workspace

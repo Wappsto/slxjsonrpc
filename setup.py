@@ -79,7 +79,7 @@ setup(
     ],
     data_files=[('info', [readme_file.name, changelog_file.name])],
     install_requires=[
-       'pydantic>=1.6.1'
+       'pydantic>=2.1.1,<3.0.0'
     ],
     python_requires='>3.6.0',
 )
