@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 from typing import Any
 from typing import Callable
+from typing import ContextManager
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -254,7 +255,7 @@ class SlxJsonRpc:
     # -------------------------------------------------------------------------
 
     @contextmanager
-    def batch(self):
+    def batch(self) -> ContextManager[None]:
         """Batch RPC's within the context manager, into one RPC-Batch-List."""
         self.__batch_lock += 1
         try:

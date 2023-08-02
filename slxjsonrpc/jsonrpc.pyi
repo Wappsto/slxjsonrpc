@@ -1,85 +1,23 @@
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Optional
-from typing import Protocol
-from typing import Type
-from typing import Union
-
+from _typeshed import Incomplete
 from enum import Enum
-from contextlib import contextmanager
+from slxjsonrpc.schema.jsonrpc import ErrorModel as ErrorModel, RpcBatch as RpcBatch, RpcError as RpcError, RpcErrorCode as RpcErrorCode, RpcErrorMsg as RpcErrorMsg, RpcNotification as RpcNotification, RpcRequest as RpcRequest, RpcResponse as RpcResponse, rpc_set_name as rpc_set_name, set_id_mapping as set_id_mapping, set_params_map as set_params_map, set_result_map as set_result_map
+from typing import Any, Callable, ContextManager, Dict, Optional, Type, Union
 
-from slxjsonrpc.schema.jsonrpc import RpcBatch
-from slxjsonrpc.schema.jsonrpc import RpcError
-from slxjsonrpc.schema.jsonrpc import RpcNotification
-from slxjsonrpc.schema.jsonrpc import RpcRequest
-from slxjsonrpc.schema.jsonrpc import RpcResponse
+RpcSchemas = Union[RpcError, RpcNotification, RpcRequest, RpcResponse]
 
-from slxjsonrpc.schema.jsonrpc import ErrorModel
-from slxjsonrpc.schema.jsonrpc import RpcErrorCode
-
-
-JsonSchemas: Union[
-    RpcError,
-    RpcNotification,
-    RpcRequest,
-    RpcResponse
-]
-
-
-class RpcErrorException(Protocol):
-    def __init__(
-        self,
-        code: Union[int, RpcErrorCode],
-        msg: str,
-        data: Optional[Any] = None
-    ) -> None: ...
+class RpcErrorException(Exception):
+    code: Incomplete
+    msg: Incomplete
+    data: Incomplete
+    def __init__(self, code: Union[int, RpcErrorCode], msg: str, data: Optional[Any] = ...) -> None: ...
     def get_rpc_model(self, id: Union[str, int, None]) -> RpcError: ...
 
-
-class SlxJsonRpc(Protocol):
-
-    def __init__(
-            self,
-            methods: Optional[Enum] = None,
-            method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
-            result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
-            params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
-        ): ...
-
-    def create_request(
-        self,
-        method: Union[Enum, str],
-        callback: Callable[[Any], None],
-        error_callback: Optional[Callable[[ErrorModel], None]] = None,
-        params: Optional[Any] = None,
-    ) -> Optional[RpcRequest]: ...
-
-    def _add_result_handling(
-        self,
-        method: Union[Enum, str],
-        _id: Union[str, int, None],
-        callback: Callable[[Any], None],
-        error_callback: Optional[Callable[[ErrorModel], None]] = None,
-    ) -> None: ...
-
-    def create_notification(
-        self,
-        method: Union[Enum, str],
-        params: Optional[Any] = None,
-    ) -> Optional[RpcNotification]: ...
-
-    @contextmanager
-    def batch(self): ...
-
-    def bulk_size(self) -> int: ...
-
-    def get_batch_data(
-        self,
-        data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]] = None
-    ) -> Optional[Union[RpcBatch, RpcRequest, RpcNotification, RpcError, RpcResponse]]:  ...
-
-    def parser(
-        self,
-        data: Union[bytes, str, dict, list]
-    ) -> Optional[Union[RpcError, RpcResponse, RpcBatch]]: ...
+class SlxJsonRpc:
+    log: Incomplete
+    def __init__(self, methods: Optional[Enum] = ..., method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = ..., result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ..., params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ...) -> None: ...
+    def create_request(self, method: Union[Enum, str], callback: Callable[[Any], None], error_callback: Optional[Callable[[ErrorModel], None]] = ..., params: Optional[Any] = ...) -> Optional[RpcRequest]: ...
+    def create_notification(self, method: Union[Enum, str], params: Optional[Any] = ...) -> Optional[RpcNotification]: ...
+    def batch(self) -> ContextManager[None]: ...
+    def batch_size(self) -> int: ...
+    def get_batch_data(self, data: Optional[Union[RpcRequest, RpcNotification, RpcError, RpcResponse]] = ...) -> Optional[Union[RpcBatch, RpcRequest, RpcNotification, RpcError, RpcResponse]]: ...
+    def parser(self, data: Union[bytes, str, dict, list]) -> Optional[Union[RpcError, RpcResponse, RpcBatch]]: ...
