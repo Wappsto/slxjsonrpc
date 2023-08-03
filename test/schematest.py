@@ -8,8 +8,8 @@ from typing import Union
 import pytest
 
 from slxjsonrpc.schema import jsonrpc as jsonrpc_schema
+from slxjsonrpc.schema.jsonrpc import MethodError
 
-from pydantic import TypeAdapter
 from pydantic import ValidationError
 
 
@@ -32,19 +32,19 @@ class TestSchema:
         })
 
     @pytest.mark.parametrize(
-        "method,data,not_exception",
+        "method,data,should_trigger_exception",
         [
-            ["add", [1, 2, 3], True],
-            ["add", "pong", False],
-            ["sub", [1, 2, 3], True],
-            ["sub", "pong", False],
-            ["ping", None, True],
-            ["ping", [1, 2, 3], False],
-            ["NOP", None, False],
-            ["NOP", "Nop!", False],
+            ["add", [1, 2, 3], False],
+            ["add", "pong", True],
+            ["sub", [1, 2, 3], False],
+            ["sub", "pong", True],
+            ["ping", None, False],
+            ["ping", [1, 2, 3], True],
+            ["NOP", None, True],
+            ["NOP", "Nop!", True],
         ]
     )
-    def test_request(self, method, data, not_exception):
+    def test_request(self, method, data, should_trigger_exception):
         """Test basic Request parsing."""
         jsonrpc_schema.RpcRequest.update_method(MethodsTest)
         strJson = {
@@ -55,30 +55,30 @@ class TestSchema:
         if data:
             strJson["params"] = data
         print(strJson)
-        new_obj = TypeAdapter(jsonrpc_schema.RpcRequest)
+
         try:
-            r_data = new_obj.validate_python(strJson)
-        except ValidationError:
-            if not_exception:
+            r_data = jsonrpc_schema.RpcRequest.model_validate(strJson)
+        except (ValidationError, MethodError):
+            if not should_trigger_exception:
                 raise
         else:
-            if not not_exception:
+            if should_trigger_exception:
                 raise ValueError(f"Should Not have passed: {r_data}")
 
     @pytest.mark.parametrize(
-        "method,data,not_exception",
+        "method,data,should_trigger_exception",
         [
-            ["add", [1, 2, 3], True],
-            ["add", "pong", False],
-            ["sub", [1, 2, 3], True],
-            ["sub", "pong", False],
-            ["ping", None, True],
-            ["ping", [1, 2, 3], False],
-            ["NOP", None, False],
-            ["NOP", "Nop!", False],
+            ["add", [1, 2, 3], False],
+            ["add", "pong", True],
+            ["sub", [1, 2, 3], False],
+            ["sub", "pong", True],
+            ["ping", None, False],
+            ["ping", [1, 2, 3], True],
+            ["NOP", None, True],
+            ["NOP", "Nop!", True],
         ]
     )
-    def test_notifications(self, method, data, not_exception):
+    def test_notifications(self, method, data, should_trigger_exception):
         """Test basic Notification parsing."""
         jsonrpc_schema.RpcNotification.update_method(MethodsTest)
         strJson = {
@@ -88,31 +88,30 @@ class TestSchema:
         if data:
             strJson["params"] = data
         print(strJson)
-        new_obj = TypeAdapter(jsonrpc_schema.RpcNotification)
+
         try:
-            r_data = new_obj.validate_python(strJson)
-        except ValidationError:
-            if not_exception:
+            r_data = jsonrpc_schema.RpcNotification.model_validate(strJson)
+        except (ValidationError, MethodError):
+            if not should_trigger_exception:
                 raise
         else:
-            if not not_exception:
+            if should_trigger_exception:
                 raise ValueError(f"Should Not have passed: {r_data}")
 
     @pytest.mark.parametrize(
         "_id",
         [
-            ["hej"],
-            ["øæasdnh"],
-            ["he123\"}kjnf"],
+            "hej",
+            "øæasdnh",
+            "he123\"}kjnf",
         ]
     )
-    def test_request_name(self, _id):
+    def test_response_id(self, _id):
         """Test if the variable naming convention works."""
         method = "add"
         data = [1, 2, 3]
         jsonrpc_schema.RpcRequest.update_method(MethodsTest)
         jsonrpc_schema.rpc_set_name(...)
-        _id = "hej"
         strJson = {
             "id": _id,
             "jsonrpc": "2.0",
@@ -121,8 +120,51 @@ class TestSchema:
         if data:
             strJson["params"] = data
 
-        new_obj = TypeAdapter(jsonrpc_schema.RpcRequest)
+        r_data = jsonrpc_schema.RpcRequest.model_validate(strJson)
 
-        r_data = new_obj.validate_python(strJson)
+        assert r_data.id == _id
+
+    @pytest.mark.parametrize(
+        "_id",
+        [
+            "hej",
+            "øæasdnh",
+            "he123\"}kjnf",
+        ]
+    )
+    def test_emitted_id(self, _id):
+        """Test if the variable naming convention works."""
+        method = "add"
+        data = [1, 2, 3]
+        jsonrpc_schema.RpcRequest.update_method(MethodsTest)
+        jsonrpc_schema.rpc_set_name(_id)
+
+        r_data = jsonrpc_schema.RpcRequest(
+            method=method,
+            params=data,
+        )
 
         assert r_data.id == f"{jsonrpc_schema._session_id}_{_id}_{jsonrpc_schema._session_count}"
+
+    @pytest.mark.parametrize(
+        "_id",
+        [
+            "hej",
+            "øæasdnh",
+            "he123\"}kjnf",
+        ]
+    )
+    def test_given_id(self, _id):
+        """Test if the variable naming convention works."""
+        method = "add"
+        data = [1, 2, 3]
+        jsonrpc_schema.RpcRequest.update_method(MethodsTest)
+        jsonrpc_schema.rpc_set_name(...)
+
+        r_data = jsonrpc_schema.RpcRequest(
+            method=method,
+            params=data,
+            id=_id,
+        )
+
+        assert r_data.id == _id
