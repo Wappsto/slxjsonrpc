@@ -227,7 +227,7 @@ class TestSlxJsonRpc:
         assert data_obj is None
         assert error_obj.code.value == error_code
 
-    def test_bulk(self):
+    def test_send_bulk(self):
         """Test is the Bulking works as intended."""
         c_data = self.client.create_request(
             method=MethodsTest.crash,
@@ -256,6 +256,10 @@ class TestSlxJsonRpc:
         # print(data)
         # assert False
 
+    def test_received_bulk(self):
+        """Test if the Bulking receiving works as intended."""
+        pass
+
     @pytest.mark.parametrize(
         "error_code",
         # list(range(-32099, -32000 + 1)),
@@ -268,3 +272,7 @@ class TestSlxJsonRpc:
         error_obj = self.client.parser(msg)
         obj_code = error_obj.error.code if isinstance(error_obj.error.code, int) else error_obj.error.code.value
         assert obj_code == error_code
+
+    def test_unknown_id(self):
+        """Test if the received jsonRps id is unknown."""
+        pass
