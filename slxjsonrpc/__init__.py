@@ -18,5 +18,5 @@ __all__ = [
     'RpcResponse',
 ]
 
-__version__ = "v0.8.2"
+__version__ = "v0.9.0"
 __auther__ = "Seluxit A/S"
