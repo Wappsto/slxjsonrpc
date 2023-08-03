@@ -3,6 +3,7 @@ v0.9.0 (August 3, 2023)
 
 ## Changed
  * Now using Pydantic version 2.
+ * Now require python 3.7 or later.
 
 v0.8.2 (December 13, 2021)
 ===============================================================================

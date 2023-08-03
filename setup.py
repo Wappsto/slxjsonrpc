@@ -81,5 +81,5 @@ setup(
     install_requires=[
        'pydantic>=2.1.1'
     ],
-    python_requires='>3.6.0',
+    python_requires='>3.6.15',
 )
