@@ -8,16 +8,16 @@ import random
 import string
 
 from enum import Enum
+from enum import IntEnum
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic.fields import FieldInfo
 from pydantic import field_validator
+from pydantic import FieldValidationInfo
 from pydantic import RootModel
 from pydantic import TypeAdapter
-from pydantic import FieldValidationInfo
-# from pydantic.fields import ModelField
+from pydantic.fields import FieldInfo
 
 
 from typing import Any
@@ -58,6 +58,11 @@ def _id_gen(name: Optional[Union[str, int, float]] = None) -> str:
     return f"{_session_id}_{rpc_name}_{_session_count}"
 
 
+class MethodError(Exception):
+    """Exception to track if the Method is wrong."""
+    pass
+
+
 class RpcVersion(str, Enum):
     """The supported JsonRpc versions."""
     v2_0 = "2.0"
@@ -82,7 +87,7 @@ class RpcRequest(BaseModel):
 
     Attributes:
         jsonrpc: The JsonRpc version this schema is using. (Default v2.0)
-        id: A identifier set by the client. (Is emitted it will be auto generated)
+        id: A identifier set by the client. (If emitted it will be auto generated)
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
@@ -92,7 +97,7 @@ class RpcRequest(BaseModel):
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')
 
     @field_validator('id', mode='before')
     def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> str:
@@ -102,20 +107,12 @@ class RpcRequest(BaseModel):
     @classmethod
     def update_method(cls, new_type: Enum) -> None:
         """Update the Method schema, to fit the new one."""
-        # new_fields = ModelField.infer(
-        #     name="method",
-        #     value=...,
-        #     annotation=new_type,
-        #     class_validators=None,
-        #     config=cls.__config__
-        # )
-        # cls.model_fields['method'] = new_fields
         cls.model_fields['method'] = FieldInfo(
             annotation=new_type,
         )
         cls.__annotations__['method'] = new_type
 
-    @field_validator("params", mode='before')
+    @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
         global params_mapping
@@ -123,13 +120,22 @@ class RpcRequest(BaseModel):
         if not params_mapping.keys():
             return v
 
+        if info.data.get('method') is None:
+            # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
+            return v
+
         if info.data.get('method') not in params_mapping.keys():
-            raise ValueError(f"Not valid params for method: {info.data.get('method')}.")
+            raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
         model = params_mapping[info.data.get('method')]
-        new_obj = TypeAdapter(v)
+
+        if isinstance(model, BaseModel):
+            return model.model_validate(v)
+
         if model is not None:
-            return new_obj.validate_python(model)
+            model = TypeAdapter(model)
+            return model.validate_python(v)
+
         if v:
             raise ValueError("params should not be set.")
 
@@ -150,25 +156,17 @@ class RpcNotification(BaseModel):
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')
 
     @classmethod
     def update_method(cls, new_type: Enum) -> Any:
         """Update the Method schema, to fit the new one."""
-        # new_fields = FieldInfo(
-        #     name="method",
-        #     value=...,
-        #     annotation=new_type,
-        #     class_validators=None,
-        #     config=cls.__config__
-        # )
-        # cls.model_fields['method'] = new_fields
         cls.model_fields['method'] = FieldInfo(
             annotation=new_type,
         )
         cls.__annotations__['method'] = new_type
 
-    @field_validator("params", mode='before')
+    @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
         global params_mapping
@@ -176,13 +174,22 @@ class RpcNotification(BaseModel):
         if not params_mapping.keys():
             return v
 
+        if info.data.get('method') is None:
+            # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
+            return v
+
         if info.data.get('method') not in params_mapping.keys():
-            raise ValueError(f"Not valid params fro method: {info.data.get('method')}.")
+            raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
         model = params_mapping[info.data.get('method')]
-        new_obj = TypeAdapter(v)
+
+        if isinstance(model, BaseModel):
+            return model.model_validate(v)
+
         if model is not None:
-            return new_obj.validate_python(model)
+            model = TypeAdapter(model)
+            return model.validate_python(v)
+
         if v:
             raise ValueError("params should not be set.")
 
@@ -221,7 +228,7 @@ class RpcResponse(BaseModel):
     result: Any = Field(validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')
 
     @field_validator("result", mode='before')
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any:
@@ -244,9 +251,13 @@ class RpcResponse(BaseModel):
             raise ValueError(f"Not valid params for method: {info.data.get('method')}.")
 
         model = result_mapping[the_method]
-        new_obj = TypeAdapter(v)
+
+        if isinstance(model, BaseModel):
+            return model.model_validate(v)
+
         if model is not None:
-            return new_obj.validate_python(model)
+            model = TypeAdapter(model)
+            return model.validate_python(v)
 
         if v:
             raise ValueError("result should not be set.")
@@ -256,7 +267,7 @@ class RpcResponse(BaseModel):
 #                             JsonRpc Error Object
 ###############################################################################
 
-class RpcErrorCode(Enum):
+class RpcErrorCode(IntEnum):
     """
     JsonRpc Standard Error Codes.
 
@@ -315,12 +326,26 @@ class ErrorModel(BaseModel):
         message: A short describing of the error.
         data: (Optional), a Additional information of the error.
     """
-    code: Union[RpcErrorCode, int] = Field(None, le=-32001, ge=-32099)
+    code: Union[int, RpcErrorCode]
     message: str
-    data: Optional[Any]
+    data: Optional[Any] = None
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')
+
+    @field_validator("code")
+    def method_code_parser(
+        cls,
+        v: Union[str, bytes, int, float],
+        info: FieldValidationInfo
+    ) -> Union[int, RpcErrorCode]:
+        """Error code parser."""
+        value = int(v) if isinstance(v, (str, bytes)) else v
+
+        if -32100 < value < -32000:
+            return value
+
+        return RpcErrorCode(value)
 
 
 class RpcError(BaseModel):
@@ -341,7 +366,7 @@ class RpcError(BaseModel):
 #                             JsonRpc Batch Object
 ###############################################################################
 
-class RpcBatch(RootModel):
+class RpcBatch(RootModel[List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]]):
     """The Default JsonRpc Batch Schema."""
     root: List[Union[
         RpcRequest,

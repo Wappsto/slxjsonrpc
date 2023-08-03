@@ -17,7 +17,7 @@ from typing import Union
 
 from enum import Enum
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from pydantic import ValidationError
 
 from slxjsonrpc.schema.jsonrpc import RpcBatch
@@ -27,12 +27,13 @@ from slxjsonrpc.schema.jsonrpc import RpcRequest
 from slxjsonrpc.schema.jsonrpc import RpcResponse
 
 from slxjsonrpc.schema.jsonrpc import ErrorModel
+from slxjsonrpc.schema.jsonrpc import MethodError
+from slxjsonrpc.schema.jsonrpc import rpc_set_name
 from slxjsonrpc.schema.jsonrpc import RpcErrorCode
 from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
-from slxjsonrpc.schema.jsonrpc import rpc_set_name
+from slxjsonrpc.schema.jsonrpc import set_id_mapping
 from slxjsonrpc.schema.jsonrpc import set_params_map
 from slxjsonrpc.schema.jsonrpc import set_result_map
-from slxjsonrpc.schema.jsonrpc import set_id_mapping
 
 RpcSchemas = Union[
     RpcError,
@@ -67,9 +68,9 @@ class RpcErrorException(Exception):
             data: (Optional) The Rpc Extended error message.
         """
         super().__init__()
-        self.code = code
-        self.msg = msg
-        self.data = data
+        self.code: Union[int, RpcErrorCode] = code
+        self.msg: str = msg
+        self.data: Optional[Any] = data
 
     def get_rpc_model(self, id: Union[str, int, None]) -> RpcError:
         """
@@ -134,7 +135,7 @@ class SlxJsonRpc:
             params: (Optional) The Parser method & 'params' mapping.
                     If not given, will there not be make checks for any wrong 'params'.
         """
-        self.log = logging.getLogger(__name__)
+        self.log: logging.logger = logging.getLogger(__name__)
         self.log.addHandler(logging.NullHandler())
 
         rpc_set_name(None)
@@ -148,6 +149,8 @@ class SlxJsonRpc:
 
         self.__batch_lock: int = 0
         self.__batched_list: List[RpcSchemas] = []
+
+        self.__parse_as_rpc_obj = TypeAdapter(RpcSchemas)
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
@@ -211,9 +214,7 @@ class SlxJsonRpc:
         callback: Callable[[Any], None],
         error_callback: Optional[Callable[[ErrorModel], None]] = None,
     ) -> None:
-        """
-        Added handling for when a result comes back.
-        """
+        """Added handling for when a result comes back."""
         self._id_cb[_id] = callback
         if error_callback:
             self._id_error_cb[_id] = error_callback
@@ -289,11 +290,11 @@ class SlxJsonRpc:
             return None
         if data:
             self.__batched_list.append(data)
-        sdata = self.__batched_list.copy()
+        batched_data = self.__batched_list.copy()
         self.__batched_list.clear()
-        if len(sdata) == 1:
-            return sdata[0]
-        return parse_obj_as(RpcBatch, sdata)
+        if len(batched_data) == 1:
+            return batched_data[0]
+        return RpcBatch.model_validate(batched_data)
 
     @overload
     def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...  # noqa: E704
@@ -333,7 +334,7 @@ class SlxJsonRpc:
 
     def parser(
         self,
-        data: Union[bytes, str, dict, list]
+        data: Union[bytes, str, Dict[str, Any], List[Dict[str, Any]]]
     ) -> Optional[Union[RpcError, RpcResponse, RpcBatch]]:
         """
         Parse raw JsonRpc data, & returns the Response or Error.
@@ -395,7 +396,7 @@ class SlxJsonRpc:
                         b_data.append(r_data)
                 # UNSURE: Is it required to return a batch of 1, if it was received as batch of 1?
 
-            return parse_obj_as(RpcBatch, b_data) if b_data else None
+            return RpcBatch.model_validate(b_data) if b_data else None
 
         try:
             p_data = self._parse_data(j_data)
@@ -517,16 +518,10 @@ class SlxJsonRpc:
         errors: List[Dict[str, Union[List[str], str, Dict[str, List[str]]]]]
     ) -> Optional[ErrorModel]:
         # TODO (MBK): Find a faster/better way to do this!
-        method_error = list(filter(lambda x: x.get('type') == "type_error.enum", errors))
-        params_error = list(filter(lambda x: x.get('loc') == ('__root__', 'params', '__root__'), errors))
-        type_error = list(filter(lambda x: x.get('type') in ["value_error.missing", "value_error.extra"], errors))
-        if method_error:
-            raise RpcErrorException(
-                code=RpcErrorCode.MethodNotFound,
-                msg=RpcErrorMsg.MethodNotFound,
-                data=method_error[0]
-            )
-        elif params_error:
+        # method_error = list(filter(lambda x: x.get('type') == "type_error", errors))
+        params_error = list(filter(lambda x: x.get('loc')[1] == 'params', errors))
+        type_error = list(filter(lambda x: x.get('type') in ["missing", "extra_forbidden"], errors))
+        if params_error:
             raise RpcErrorException(
                 code=RpcErrorCode.InvalidParams,
                 msg=RpcErrorMsg.InvalidParams,
@@ -546,9 +541,12 @@ class SlxJsonRpc:
         data: dict
     ) -> RpcSchemas:
         try:
-            p_data: RpcSchemas = parse_obj_as(
-                RpcSchemas,  # type: ignore
-                data
+            p_data: RpcSchemas = self.__parse_as_rpc_obj.validate_python(data)
+        except MethodError as error:
+            raise RpcErrorException(
+                code=RpcErrorCode.MethodNotFound,
+                msg=RpcErrorMsg.MethodNotFound,
+                data=error.args[0]
             )
         except ValidationError as error:
             error_package = self.__ValidationError2ErrorModel(

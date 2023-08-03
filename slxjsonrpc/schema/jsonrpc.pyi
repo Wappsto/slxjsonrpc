@@ -1,10 +1,11 @@
-from _typeshed import Incomplete
-from enum import Enum
-from pydantic import BaseModel, FieldValidationInfo as FieldValidationInfo, RootModel
+from enum import Enum, IntEnum
+from pydantic import BaseModel, ConfigDict, FieldValidationInfo as FieldValidationInfo, RootModel
 from typing import Any, Dict, List, Optional, Type, Union
 
 def rpc_set_name(name: Optional[str]) -> None: ...
 def rpc_get_name() -> Optional[str]: ...
+
+class MethodError(Exception): ...
 
 class RpcVersion(str, Enum):
     v2_0: str
@@ -18,7 +19,7 @@ class RpcRequest(BaseModel):
     method: str
     id: Optional[Union[str, int]]
     params: Optional[Any]
-    model_config: Incomplete
+    model_config: ConfigDict
     def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> str: ...
     @classmethod
     def update_method(cls, new_type: Enum) -> None: ...
@@ -28,7 +29,7 @@ class RpcNotification(BaseModel):
     jsonrpc: Optional[RpcVersion]
     method: str
     params: Optional[Any]
-    model_config: Incomplete
+    model_config: ConfigDict
     @classmethod
     def update_method(cls, new_type: Enum) -> Any: ...
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any: ...
@@ -43,10 +44,10 @@ class RpcResponse(BaseModel):
     jsonrpc: Optional[RpcVersion]
     id: Union[str, int]
     result: Any
-    model_config: Incomplete
+    model_config: ConfigDict
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any: ...
 
-class RpcErrorCode(Enum):
+class RpcErrorCode(IntEnum):
     ParseError: int
     InvalidRequest: int
     MethodNotFound: int
@@ -63,15 +64,16 @@ class RpcErrorMsg(str, Enum):
     ServerError: str
 
 class ErrorModel(BaseModel):
-    code: Union[RpcErrorCode, int]
+    code: Union[int, RpcErrorCode]
     message: str
     data: Optional[Any]
-    model_config: Incomplete
+    model_config: ConfigDict
+    def method_code_parser(cls, v: Union[str, bytes, int, float], info: FieldValidationInfo) -> Union[int, RpcErrorCode]: ...
 
 class RpcError(BaseModel):
     id: Union[str, int, None]
     jsonrpc: Optional[RpcVersion]
     error: ErrorModel
 
-class RpcBatch(RootModel):
+class RpcBatch(RootModel[List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]]):
     root: List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]
