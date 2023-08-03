@@ -160,3 +160,5 @@ TODO List
  * [ ] Test Request, where params set, when they should not be.
  * [ ] Test response with unknown id
  * [ ] Test RpcError, when no Error callback is set.
+ * [ ] Test if the Bulking receiving works as intended.
+ * [ ] Test with params as pydantic BaseModel.
