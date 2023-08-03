@@ -35,7 +35,7 @@ lint:
 	flake8 --docstring-convention google --ignore D212,W503  slxjsonrpc/*.py slxjsonrpc/**/*.py
 	mypy --strict --python-version 3.7  slxjsonrpc/*.py slxjsonrpc/**/*.py
 
-gen-stub:
+mypy-stub:
 	stubgen slxjsonrpc/{*,**/*}.py --out .
 
 build: clean-all
