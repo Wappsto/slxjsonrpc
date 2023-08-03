@@ -19,7 +19,7 @@ class RpcRequest(BaseModel):
     method: str
     id: Optional[Union[str, int]]
     params: Optional[Any]
-    model_config: ConfigDict
+    model_config: ConfigDict # type: ignore
     def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> str: ...
     @classmethod
     def update_method(cls, new_type: Enum) -> None: ...
@@ -29,7 +29,7 @@ class RpcNotification(BaseModel):
     jsonrpc: Optional[RpcVersion]
     method: str
     params: Optional[Any]
-    model_config: ConfigDict
+    model_config: ConfigDict # type: ignore
     @classmethod
     def update_method(cls, new_type: Enum) -> Any: ...
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any: ...
@@ -44,7 +44,7 @@ class RpcResponse(BaseModel):
     jsonrpc: Optional[RpcVersion]
     id: Union[str, int]
     result: Any
-    model_config: ConfigDict
+    model_config: ConfigDict # type: ignore
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any: ...
 
 class RpcErrorCode(IntEnum):
@@ -67,7 +67,7 @@ class ErrorModel(BaseModel):
     code: Union[int, RpcErrorCode]
     message: str
     data: Optional[Any]
-    model_config: ConfigDict
+    model_config: ConfigDict # type: ignore
     def method_code_parser(cls, v: Union[str, bytes, int, float], info: FieldValidationInfo) -> Union[int, RpcErrorCode]: ...
 
 class RpcError(BaseModel):
