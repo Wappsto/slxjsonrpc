@@ -1,6 +1,7 @@
 .PHONY: clean-pyc clean-build build
 
 ENV=env
+PY_VERSION=python3.10
 USERNAME=seluxit
 
 clean: clean-pyc clean-build
@@ -47,7 +48,7 @@ install:
 	pip3 install .
 
 setup:
-	python3.11 -m venv ${ENV}/.
+	${PY_VERSION} -m venv ${ENV}/.
 	${ENV}/bin/pip3 install --upgrade pip
 	${ENV}/bin/pip3 install --requirement requirements.txt
 
