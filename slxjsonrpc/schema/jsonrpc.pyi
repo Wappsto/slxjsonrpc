@@ -16,8 +16,8 @@ def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> N
 
 class RpcRequest(BaseModel):
     jsonrpc: Optional[RpcVersion]
-    method: str
-    id: Optional[Union[str, int]]
+    method: Union[Enum, str]
+    id: Union[str, int]
     params: Optional[Any]
     model_config: ConfigDict  #type: ignore
     def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> Union[str, int]: ...
@@ -27,7 +27,7 @@ class RpcRequest(BaseModel):
 
 class RpcNotification(BaseModel):
     jsonrpc: Optional[RpcVersion]
-    method: str
+    method: Union[Enum, str]
     params: Optional[Any]
     model_config: ConfigDict  #type: ignore
     @classmethod
