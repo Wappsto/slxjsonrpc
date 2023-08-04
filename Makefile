@@ -28,7 +28,7 @@ clean-env:
 
 lint:
 	${ENV}/bin/flake8 --docstring-convention google --ignore D212,W503  slxjsonrpc/*.py slxjsonrpc/**/*.py
-	${ENV}/bin/mypy --strict --python-version 3.7  slxjsonrpc/*.py slxjsonrpc/**/*.py
+	${ENV}/bin/mypy --strict --follow-imports=normal --python-version 3.7  slxjsonrpc/*.py slxjsonrpc/**/*.py
 
 test: lint
 	${ENV}/bin/tox
@@ -47,7 +47,7 @@ install:
 	pip3 install .
 
 setup:
-	python3 -m venv ${ENV}/.
+	python3.11 -m venv ${ENV}/.
 	${ENV}/bin/pip3 install --upgrade pip
 	${ENV}/bin/pip3 install --requirement requirements.txt
 
