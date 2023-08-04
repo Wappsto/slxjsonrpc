@@ -44,7 +44,7 @@ mypy-stub:
 build: clean-all
 	python3 setup.py sdist bdist_wheel
 
-publish: build
+publish: test build
 	@echo "Please make sure that you have set 'TWINE_PASSWORD'."
 	python3 -m twine upload -u "${USERNAME}" --skip-existing dist/*
 
