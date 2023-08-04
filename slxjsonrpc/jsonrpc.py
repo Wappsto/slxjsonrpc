@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 from typing import Any
 from typing import Callable
-from typing import ContextManager
+from typing import Generator
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -19,6 +19,7 @@ from enum import Enum
 
 from pydantic import TypeAdapter
 from pydantic import ValidationError
+from pydantic_core import ErrorDetails
 
 from slxjsonrpc.schema.jsonrpc import RpcBatch
 from slxjsonrpc.schema.jsonrpc import RpcError
@@ -135,7 +136,7 @@ class SlxJsonRpc:
             params: (Optional) The Parser method & 'params' mapping.
                     If not given, will there not be make checks for any wrong 'params'.
         """
-        self.log: logging.logger = logging.getLogger(__name__)
+        self.log: logging.Logger = logging.getLogger(__name__)
         self.log.addHandler(logging.NullHandler())
 
         rpc_set_name(None)
@@ -150,7 +151,7 @@ class SlxJsonRpc:
         self.__batch_lock: int = 0
         self.__batched_list: List[RpcSchemas] = []
 
-        self.__parse_as_rpc_obj = TypeAdapter(RpcSchemas)
+        self.__parse_as_rpc_obj: TypeAdapter = TypeAdapter(RpcSchemas)  # type: ignore
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
@@ -256,7 +257,7 @@ class SlxJsonRpc:
     # -------------------------------------------------------------------------
 
     @contextmanager
-    def batch(self) -> ContextManager[None]:
+    def batch(self) -> Generator[None, None, None]:
         """Batch RPC's within the context manager, into one RPC-Batch-List."""
         self.__batch_lock += 1
         try:
@@ -355,7 +356,7 @@ class SlxJsonRpc:
             None, if no reply are needed.
         """
         try:
-            j_data: Union[dict, list]
+            j_data: Union[Dict[str, Any], List[Dict[str, Any]]]
             if isinstance(data, dict) or isinstance(data, list):
                 j_data = data
             else:
@@ -409,7 +410,7 @@ class SlxJsonRpc:
     def __reply_logic(
         self,
         p_data: RpcSchemas
-    ) -> Union[RpcError, RpcResponse, None]:
+    ) -> Optional[Union[RpcResponse, RpcError]]:
         try:
             if isinstance(p_data, RpcError):
                 return self._error_reply_logic(data=p_data)
@@ -441,7 +442,7 @@ class SlxJsonRpc:
 
         return None
 
-    def _error_reply_logic(self, data: RpcError):
+    def _error_reply_logic(self, data: RpcError) -> Optional[RpcError]:
         if data.id not in self._id_cb.keys():
             # NOTE: Triggers only if it was an error that we generated.
             return data
@@ -453,8 +454,9 @@ class SlxJsonRpc:
                 cb = self._id_error_cb.pop(data.id)
                 self.log.debug(f"Exec Error CB: {cb}")
                 cb(data.error)
+        return None
 
-    def _notification_reply_logic(self, data: RpcNotification):
+    def _notification_reply_logic(self, data: RpcNotification) -> Optional[RpcError]:
         if data.method not in self._method_cb.keys():
             return self._batch_filter(RpcError(
                 id=None,
@@ -468,8 +470,9 @@ class SlxJsonRpc:
             cb = self._method_cb[data.method]
             self.log.debug(f"Exec Notification CB: {cb}")
             cb(data.params)
+        return None
 
-    def _request_reply_logic(self, data: RpcRequest):
+    def _request_reply_logic(self, data: RpcRequest) -> Optional[Union[RpcResponse, RpcError]]:
         if data.method in self._method_cb.keys():
             with self._except_handler():
                 cb = self._method_cb[data.method]
@@ -488,7 +491,7 @@ class SlxJsonRpc:
             )
         ))
 
-    def _response_reply_logic(self, data: RpcResponse):
+    def _response_reply_logic(self, data: RpcResponse) -> Optional[RpcResponse]:
         if data.id not in self._id_cb.keys():
             self.log.warning(f"Received an unknown RpcResponse: {data}")
         else:
@@ -497,15 +500,16 @@ class SlxJsonRpc:
                 cb = self._id_cb.pop(data.id)
                 self.log.debug(f"Exec Response CB: {cb}")
                 cb(data.result)
+        return None
 
     @contextmanager
-    def _except_handler(self):
+    def _except_handler(self) -> Generator[None, None, None]:
         try:
             yield
         except RpcErrorException:
             raise
         except Exception as err:
-            # NOTE: Only trickered from user given function, or if it was not a function
+            # NOTE: Only triggered from user given function, or if it was not a function
             self.log.exception("An error happened doing execution of a callback.")
             raise RpcErrorException(
                 code=RpcErrorCode.ServerError,
@@ -515,12 +519,11 @@ class SlxJsonRpc:
 
     def __ValidationError2ErrorModel(
         self,
-        errors: List[Dict[str, Union[List[str], str, Dict[str, List[str]]]]]
+        errors: List[ErrorDetails]
     ) -> Optional[ErrorModel]:
         # TODO (MBK): Find a faster/better way to do this!
-        # method_error = list(filter(lambda x: x.get('type') == "type_error", errors))
-        params_error = list(filter(lambda x: x.get('loc')[1] == 'params', errors))
-        type_error = list(filter(lambda x: x.get('type') in ["missing", "extra_forbidden"], errors))
+        params_error = list(filter(lambda x: x['loc'][1] == 'params', errors))
+        type_error = list(filter(lambda x: x['type'] in ["missing", "extra_forbidden"], errors))
         if params_error:
             raise RpcErrorException(
                 code=RpcErrorCode.InvalidParams,
@@ -538,7 +541,7 @@ class SlxJsonRpc:
 
     def _parse_data(
         self,
-        data: dict
+        data: Dict[str, Any]
     ) -> RpcSchemas:
         try:
             p_data: RpcSchemas = self.__parse_as_rpc_obj.validate_python(data)

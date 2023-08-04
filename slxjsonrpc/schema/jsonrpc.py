@@ -97,10 +97,10 @@ class RpcRequest(BaseModel):
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config: ConfigDict = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')  # type: ignore
 
     @field_validator('id', mode='before')
-    def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> str:
+    def id_autofill(cls, v: Optional[Union[str, int]], info: FieldValidationInfo) -> Union[str, int]:
         """Validate the id, and auto-fill it is not set."""
         return v or _id_gen(name=rpc_get_name() or info.data.get('method'))
 
@@ -127,14 +127,14 @@ class RpcRequest(BaseModel):
         if info.data.get('method') not in params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data.get('method')]
+        model = params_mapping[str(info.data.get('method'))]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
 
         if model is not None:
-            model = TypeAdapter(model)
-            return model.validate_python(v)
+            model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
+            return model_converter.validate_python(v)
 
         if v:
             raise ValueError("params should not be set.")
@@ -156,7 +156,7 @@ class RpcNotification(BaseModel):
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config: ConfigDict = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')  # type: ignore
 
     @classmethod
     def update_method(cls, new_type: Enum) -> Any:
@@ -181,14 +181,14 @@ class RpcNotification(BaseModel):
         if info.data.get('method') not in params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data.get('method')]
+        model = params_mapping[str(info.data.get('method'))]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
 
         if model is not None:
-            model = TypeAdapter(model)
-            return model.validate_python(v)
+            model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
+            return model_converter.validate_python(v)
 
         if v:
             raise ValueError("params should not be set.")
@@ -228,7 +228,7 @@ class RpcResponse(BaseModel):
     result: Any = Field(validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config: ConfigDict = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')  # type: ignore
 
     @field_validator("result", mode='before')
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any:
@@ -242,7 +242,7 @@ class RpcResponse(BaseModel):
         the_id = info.data.get('id')
 
         if the_id not in id_mapping:
-            # UNSURE (MBK): What should done, when it was not ment for this receiver?
+            # UNSURE (MBK): What should done, when it was not meant for this receiver?
             return v
 
         the_method = id_mapping[the_id]
@@ -256,8 +256,8 @@ class RpcResponse(BaseModel):
             return model.model_validate(v)
 
         if model is not None:
-            model = TypeAdapter(model)
-            return model.validate_python(v)
+            model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
+            return model_converter.validate_python(v)
 
         if v:
             raise ValueError("result should not be set.")
@@ -331,7 +331,7 @@ class ErrorModel(BaseModel):
     data: Optional[Any] = None
 
     """Enforce that there can not be added extra keys to the BaseModel."""
-    model_config: ConfigDict = ConfigDict(extra='forbid')
+    model_config: ConfigDict = ConfigDict(extra='forbid')  # type: ignore
 
     @field_validator("code")
     def method_code_parser(
@@ -340,7 +340,7 @@ class ErrorModel(BaseModel):
         info: FieldValidationInfo
     ) -> Union[int, RpcErrorCode]:
         """Error code parser."""
-        value = int(v) if isinstance(v, (str, bytes)) else v
+        value = int(v)
 
         if -32100 < value < -32000:
             return value
