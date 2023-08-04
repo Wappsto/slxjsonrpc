@@ -97,8 +97,8 @@ class TestSlxJsonRpc:
             callback=set_data
         )
 
-        s_data = self.server.parser(c_data.json(exclude_none=True))
-        self.client.parser(s_data.json(exclude_none=True))
+        s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
+        self.client.parser(s_data.model_dump_json(exclude_none=True))
 
         assert round_trip == result
 
@@ -116,7 +116,7 @@ class TestSlxJsonRpc:
             params=params
         )
 
-        s_data = self.server.parser(c_data.json(exclude_none=True))
+        s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
 
         assert s_data is None
         assert self.tweet_data == result
@@ -159,7 +159,7 @@ class TestSlxJsonRpc:
             error_obj = temp
 
         c_data = self.client.create_request()
-        s_data = self.server.parser(c_data.json(exclude_none=True))
+        s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
         e_data = transformer(s_data)
         r_data = self.client.parser(e_data)
 
@@ -217,7 +217,7 @@ class TestSlxJsonRpc:
             callback=set_data,
             error_callback=set_error
         )
-        s_data = self.server.parser(c_data.json(exclude_none=True))
+        s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
         e_data = transformer(s_data)
         r_data = self.client.parser(e_data)
 
@@ -227,7 +227,7 @@ class TestSlxJsonRpc:
         assert data_obj is None
         assert error_obj.code.value == error_code
 
-    def test_bulk(self):
+    def test_send_bulk(self):
         """Test is the Bulking works as intended."""
         c_data = self.client.create_request(
             method=MethodsTest.crash,
@@ -235,7 +235,7 @@ class TestSlxJsonRpc:
             error_callback=lambda data: None
         )
         with self.server.batch():
-            s_data = self.server.parser(c_data.json(exclude_none=True))
+            s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
             assert s_data is None
             s_data = self.server.create_request(
                 method=MethodsTest.crash,
@@ -251,10 +251,14 @@ class TestSlxJsonRpc:
         assert self.server.batch_size() == 3
 
         s_data = self.server.get_batch_data()
-        # print(f"{s_data.json(exclude_none=True)}")
-        self.client.parser(s_data.json(exclude_none=True))
+        # print(f"{s_data.model_dump_json(exclude_none=True)}")
+        self.client.parser(s_data.model_dump_json(exclude_none=True))
         # print(data)
         # assert False
+
+    def test_received_bulk(self):
+        """Test if the Bulking receiving works as intended."""
+        pass
 
     @pytest.mark.parametrize(
         "error_code",
@@ -268,3 +272,7 @@ class TestSlxJsonRpc:
         error_obj = self.client.parser(msg)
         obj_code = error_obj.error.code if isinstance(error_obj.error.code, int) else error_obj.error.code.value
         assert obj_code == error_code
+
+    def test_unknown_id(self):
+        """Test if the received jsonRps id is unknown."""
+        pass
