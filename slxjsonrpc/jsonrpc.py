@@ -295,7 +295,8 @@ class SlxJsonRpc:
         self.__batched_list.clear()
         if len(batched_data) == 1:
             return batched_data[0]
-        return RpcBatch.model_validate(batched_data)
+        batch_obj: RpcBatch = RpcBatch.model_validate(batched_data)
+        return batch_obj
 
     @overload
     def _batch_filter(self, data: RpcError) -> Optional[RpcError]: ...  # noqa: E704
