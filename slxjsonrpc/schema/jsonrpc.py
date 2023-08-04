@@ -92,8 +92,8 @@ class RpcRequest(BaseModel):
         params: (Optional) The input parameters for the invoked method.
     """
     jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
-    method: str
-    id: Optional[Union[str, int]] = Field(default=None, validate_default=True)
+    method: Union[Enum, str]
+    id: Union[str, int] = Field(default_factory=lambda: _id_gen(name=rpc_get_name()))
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
@@ -127,7 +127,7 @@ class RpcRequest(BaseModel):
         if info.data.get('method') not in params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[str(info.data.get('method'))]
+        model = params_mapping[info.data['method']]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
@@ -152,7 +152,7 @@ class RpcNotification(BaseModel):
         params: (Optional) The input parameters for the invoked method.
     """
     jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
-    method: str
+    method: Union[Enum, str]
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
@@ -181,7 +181,7 @@ class RpcNotification(BaseModel):
         if info.data.get('method') not in params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[str(info.data.get('method'))]
+        model = params_mapping[info.data['method']]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)

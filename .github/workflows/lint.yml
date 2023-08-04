@@ -22,4 +22,4 @@ jobs:
       run: flake8 --docstring-convention google --ignore D212,W503  $(git ls-files 'slxjsonrpc/*.py')
 
     - name: Analysing the code with mypy
-      run: mypy --strict --python-version 3.7  $(git ls-files 'slxjsonrpc/*.py')
+      run: mypy --strict --follow-imports=normal --python-version 3.7  $(git ls-files 'slxjsonrpc/*.py')
