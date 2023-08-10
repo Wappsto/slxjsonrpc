@@ -1,6 +1,6 @@
 slxjsonrpc
 ===============================================================================
-[![python](https://img.shields.io/badge/Python-3.6%203.9-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![versions](https://img.shields.io/pypi/pyversions/slxjsonrpc.svg)](https://github.com/wappsto/slxjsonrpc)
 [![Test Status](https://github.com/Wappsto/slxjsonrpc/actions/workflows/test.yml/badge.svg)](https://github.com/Wappsto/slxjsonrpc/actions/workflows/test.yml)
 [![Lint Status](https://github.com/Wappsto/slxjsonrpc/actions/workflows/lint.yml/badge.svg)](https://github.com/Wappsto/slxjsonrpc/actions/workflows/lint.yml)
 [![Coverage](https://codecov.io/github/wappsto/slxjsonrpc/branch/main/graph/badge.svg)](https://codecov.io/github/wappsto/slxjsonrpc)
