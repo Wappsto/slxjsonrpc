@@ -7,8 +7,8 @@ from contextlib import contextmanager
 
 from typing import Any
 from typing import Callable
-from typing import Generator
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import overload
@@ -26,6 +26,7 @@ from slxjsonrpc.schema.jsonrpc import RpcError
 from slxjsonrpc.schema.jsonrpc import RpcNotification
 from slxjsonrpc.schema.jsonrpc import RpcRequest
 from slxjsonrpc.schema.jsonrpc import RpcResponse
+from slxjsonrpc.schema.jsonrpc import RpcSchemas
 
 from slxjsonrpc.schema.jsonrpc import ErrorModel
 from slxjsonrpc.schema.jsonrpc import MethodError
@@ -35,13 +36,6 @@ from slxjsonrpc.schema.jsonrpc import RpcErrorMsg
 from slxjsonrpc.schema.jsonrpc import set_id_mapping
 from slxjsonrpc.schema.jsonrpc import set_params_map
 from slxjsonrpc.schema.jsonrpc import set_result_map
-
-RpcSchemas = Union[
-    RpcError,
-    RpcNotification,
-    RpcRequest,
-    RpcResponse
-]
 
 
 class RpcErrorException(Exception):
@@ -257,7 +251,7 @@ class SlxJsonRpc:
     # -------------------------------------------------------------------------
 
     @contextmanager
-    def batch(self) -> Generator[None, None, None]:
+    def batch(self) -> Iterator[None]:
         """Batch RPC's within the context manager, into one RPC-Batch-List."""
         self.__batch_lock += 1
         try:
@@ -504,7 +498,7 @@ class SlxJsonRpc:
         return None
 
     @contextmanager
-    def _except_handler(self) -> Generator[None, None, None]:
+    def _except_handler(self) -> Iterator[None]:
         try:
             yield
         except RpcErrorException:

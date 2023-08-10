@@ -1,6 +1,6 @@
 from enum import Enum, IntEnum
 from pydantic import BaseModel, ConfigDict, FieldValidationInfo as FieldValidationInfo, RootModel
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 def rpc_set_name(name: Optional[str]) -> None: ...
 def rpc_get_name() -> Optional[str]: ...
@@ -74,6 +74,9 @@ class RpcError(BaseModel):
     id: Union[str, int, None]
     jsonrpc: Optional[RpcVersion]
     error: ErrorModel
+RpcSchemas = Union[RpcError, RpcNotification, RpcRequest, RpcResponse]
 
-class RpcBatch(RootModel[List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]]):
-    root: List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]
+class RpcBatch(RootModel[List[RpcSchemas]]):
+    root: List[RpcSchemas]
+    def __iter__(self) -> Iterator[RpcSchemas]: ...
+    def __getitem__(self, item: int) -> RpcSchemas: ...

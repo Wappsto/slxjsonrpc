@@ -22,6 +22,7 @@ from pydantic.fields import FieldInfo
 
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Type
@@ -366,11 +367,22 @@ class RpcError(BaseModel):
 #                             JsonRpc Batch Object
 ###############################################################################
 
-class RpcBatch(RootModel[List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]]):
+RpcSchemas = Union[
+    RpcError,
+    RpcNotification,
+    RpcRequest,
+    RpcResponse
+]
+
+
+class RpcBatch(RootModel[List[RpcSchemas]]):
     """The Default JsonRpc Batch Schema."""
-    root: List[Union[
-        RpcRequest,
-        RpcNotification,
-        RpcResponse,
-        RpcError,
-    ]] = Field(..., min_length=1)
+    root: List[RpcSchemas] = Field(..., min_length=1)
+
+    def __iter__(self) -> Iterator[RpcSchemas]:  # type: ignore[override]
+        """For enabling list functionality."""
+        return iter(self.root)
+
+    def __getitem__(self, item: int) -> RpcSchemas:
+        """For enabling list functionality."""
+        return self.root[item]
