@@ -73,13 +73,13 @@ class RpcVersion(str, Enum):
 #                             JsonRpc Request Object
 ###############################################################################
 
-params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
 
 def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
-    global params_mapping
-    params_mapping = mapping
+    global _params_mapping
+    _params_mapping = mapping
 
 
 class RpcRequest(BaseModel):
@@ -116,19 +116,19 @@ class RpcRequest(BaseModel):
     @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global params_mapping
+        global _params_mapping
 
-        if not params_mapping.keys():
+        if not _params_mapping.keys():
             return v
 
         if info.data.get('method') is None:
             # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
             return v
 
-        if info.data.get('method') not in params_mapping.keys():
+        if info.data.get('method') not in _params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data['method']]
+        model = _params_mapping[info.data['method']]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
@@ -170,19 +170,19 @@ class RpcNotification(BaseModel):
     @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global params_mapping
+        global _params_mapping
 
-        if not params_mapping.keys():
+        if not _params_mapping.keys():
             return v
 
         if info.data.get('method') is None:
             # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
             return v
 
-        if info.data.get('method') not in params_mapping.keys():
+        if info.data.get('method') not in _params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data['method']]
+        model = _params_mapping[info.data['method']]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
@@ -199,21 +199,21 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
-id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
+_id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
 
 def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None:
     """Set the id to method mapping."""
-    global id_mapping
-    id_mapping = mapping
+    global _id_mapping
+    _id_mapping = mapping
 
 
 def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
-    global result_mapping
-    result_mapping = mapping
+    global _result_mapping
+    _result_mapping = mapping
 
 
 class RpcResponse(BaseModel):
@@ -234,24 +234,24 @@ class RpcResponse(BaseModel):
     @field_validator("result", mode='before')
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global result_mapping
-        global method_id_mapping
+        global _result_mapping
+        global _id_mapping
 
-        if not result_mapping.keys():
+        if not _result_mapping.keys():
             return v
 
         the_id = info.data.get('id')
 
-        if the_id not in id_mapping:
+        if the_id not in _id_mapping:
             # UNSURE (MBK): What should done, when it was not meant for this receiver?
             return v
 
-        the_method = id_mapping[the_id]
+        the_method = _id_mapping[the_id]
 
-        if the_method not in result_mapping.keys():
+        if the_method not in _result_mapping.keys():
             raise ValueError(f"Not valid params for method: {info.data.get('method')}.")
 
-        model = result_mapping[the_method]
+        model = _result_mapping[the_method]
 
         if isinstance(model, BaseModel):
             return model.model_validate(v)
