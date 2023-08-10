@@ -135,29 +135,3 @@ License
 -------------------------------------------------------------------------------
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
-
-
-Known Bugs
--------------------------------------------------------------------------------
- * Can not have 2 independent slxJsonRpcs running in same code base.
-
-
-TODO List
--------------------------------------------------------------------------------
-**Code base**
- * [ ] Add more/better logging logs.
- * [x] Enforce the result Schema. schema/jsonrpc.py:217-225
- * [x] Push to pip.
- * [ ] Refactor so the same code can have multiple independent slxJsonRpc.
- * [x] Use case Examples.
-
-**Tests**
- * [ ] Add more test to get a 100%-ish testing coverage.
- * [ ] Test Notification with unknown Method, and method Enum not set. jsonrpc.py:330
- * [ ] Test Notification, where params set, when they should not be.
- * [ ] Test Request with unknown Method, and method Enum not set. jsonrpc.py:348 schema/jsonrpc.py:131
- * [ ] Test Request, where params set, when they should not be.
- * [ ] Test response with unknown id
- * [ ] Test RpcError, when no Error callback is set.
- * [ ] Test if the Bulking receiving works as intended.
- * [ ] Test with params as pydantic BaseModel.
