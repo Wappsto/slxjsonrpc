@@ -90,17 +90,39 @@ class RpcErrorException(Exception):
         )
 
 
+def method_callback_example(params: Optional[Any]) -> Optional[Any]:
+    """
+    Structure of the Method Callback function.
+
+    The method callback are called when data is received.
+
+    If an error happens, and custom error code
+    are needed, to send back, raise the RpcErrorException
+    in the callback.
+
+    Args:
+        params: The parsed data from the RpcRequest 'params'-key.
+
+    Returns:
+        The Result of the request,
+        that will be send in the 'result'-key in the RpcResponse.
+
+    Raises:
+        any: Will result in a RpcError with code: -32603
+        RpcErrorException: custom RpcError code, message & data.
+    """
+    ...
+
+
 class SlxJsonRpc:
     """
-    SlxJsonRpc is a JsonRpc helper class, that uses pydantic.
+    SlxJsonRpc is a JsonRpc helper class, that uses pydantic2.
 
     SlxJsonRpc keep track of the JsonRpc schema, and procedure for each method.
     It also ensures to route each message to where it is expected.
 
     SlxJsonRpc is build to fill both the JsonRpc server & client roll.
     To enable the JsonRpc-server, the method_cb need to be given.
-
-
     """
 
     def __init__(
@@ -119,12 +141,7 @@ class SlxJsonRpc:
             method: (Optional) A String-Enum, with all the acceptable methods.
                     If not given, will there not be make checks for any wrong methods.
             method_cb: The mapping for each given method to a function call. (Server only)
-                        callback: The function to be call when data is received.
-                                  The Callback gets the params defined in as args,
-                                  & should return the Result defined.
-                                  If an error happens, and custom error code
-                                  are needed, to send back, raise the RpcErrorException
-                                  in the callback.
+                       Example given in `method_callback_example`.
             result: (Optional) The method & 'result' mapping.
                     If not given, will there not be make checks for any wrong 'result'.
             params: (Optional) The Parser method & 'params' mapping.
