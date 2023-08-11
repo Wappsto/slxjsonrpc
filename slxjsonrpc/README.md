@@ -11,7 +11,7 @@ Unsure
 Known Bugs
 -------------------------------------------------------------------------------
  * Can not have 2 independent slxJsonRpc running in same code base.
- * If `exclude_unset` is false, the package will have: `"id":null` set.
+ * If `exclude_unset` is false, the package will have: `"id":null` set. # Have an less nice workaround applied, with multiple RpcError's.
  * If `exclude_none` is True, the package will not have: `"result":null` set.
 
 

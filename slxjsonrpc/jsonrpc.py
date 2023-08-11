@@ -23,6 +23,8 @@ from pydantic_core import ErrorDetails
 
 from slxjsonrpc.schema.jsonrpc import RpcBatch
 from slxjsonrpc.schema.jsonrpc import RpcError
+from slxjsonrpc.schema.jsonrpc import RpcErrorWithId
+from slxjsonrpc.schema.jsonrpc import RpcErrorWithoutId
 from slxjsonrpc.schema.jsonrpc import RpcNotification
 from slxjsonrpc.schema.jsonrpc import RpcRequest
 from slxjsonrpc.schema.jsonrpc import RpcResponse
@@ -82,7 +84,7 @@ class RpcErrorException(Exception):
             RpcError response fitting for this exception.
         """
         if id is None:
-            return RpcError(
+            return RpcErrorWithoutId(
                 jsonrpc=RpcVersion.v2_0,
                 error=ErrorModel(
                     code=self.code,
@@ -91,7 +93,7 @@ class RpcErrorException(Exception):
                 )
             )
 
-        return RpcError(
+        return RpcErrorWithId(
             jsonrpc=RpcVersion.v2_0,
             id=id,
             error=ErrorModel(
@@ -175,14 +177,13 @@ class SlxJsonRpc:
         self.__batched_list: List[RpcSchemas] = []
 
         self.__parse_rpc_obj_w_id: TypeAdapter = TypeAdapter(Union[
-            RpcError,
             RpcRequest,
-            RpcResponse
+            RpcResponse,
+            RpcErrorWithId,
         ])  # type: ignore
         self.__parse_rpc_obj_w_out_id: TypeAdapter = TypeAdapter(Union[
-            RpcError,
             RpcNotification,
-            RpcResponse
+            RpcErrorWithoutId,
         ])  # type: ignore
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
@@ -398,7 +399,7 @@ class SlxJsonRpc:
                 j_data = json.loads(data)
 
         except json.decoder.JSONDecodeError as err:
-            return self._batch_filter(RpcError(
+            return self._batch_filter(RpcErrorWithoutId(
                 jsonrpc=RpcVersion.v2_0,
                 error=ErrorModel(
                     code=RpcErrorCode.ParseError,
@@ -408,7 +409,7 @@ class SlxJsonRpc:
             ))
 
         if not j_data:
-            return self._batch_filter(RpcError(
+            return self._batch_filter(RpcErrorWithoutId(
                 jsonrpc=RpcVersion.v2_0,
                 error=ErrorModel(
                     code=RpcErrorCode.InvalidRequest,
@@ -447,7 +448,7 @@ class SlxJsonRpc:
         p_data: RpcSchemas
     ) -> Optional[Union[RpcResponse, RpcError]]:
         try:
-            if isinstance(p_data, RpcError):
+            if isinstance(p_data, (RpcErrorWithId, RpcErrorWithoutId)):
                 return self._error_reply_logic(data=p_data)
 
             elif isinstance(p_data, RpcNotification):
@@ -465,8 +466,9 @@ class SlxJsonRpc:
             ))
 
         except Exception as err:
+            self.log.exception(f"Normal: {err}")
             print(f"Normal: {err}")  # TODO: Testing needed to trigger this!
-            return self._batch_filter(RpcError(
+            return self._batch_filter(RpcErrorWithId(
                 jsonrpc=RpcVersion.v2_0,
                 id=getattr(p_data, 'id', None),
                 error=ErrorModel(
@@ -479,6 +481,8 @@ class SlxJsonRpc:
         return None
 
     def _error_reply_logic(self, data: RpcError) -> Optional[RpcError]:
+        if not hasattr(data, 'id'):
+            return
         if data.id not in self._id_cb.keys():
             # NOTE: Triggers only if it was an error that we generated.
             # NOTE: Triggers if the server receives an error.
@@ -496,7 +500,7 @@ class SlxJsonRpc:
 
     def _notification_reply_logic(self, data: RpcNotification) -> Optional[RpcError]:
         if data.method not in self._method_cb.keys():
-            return self._batch_filter(RpcError(
+            return self._batch_filter(RpcErrorWithoutId(
                 jsonrpc=RpcVersion.v2_0,
                 error=ErrorModel(
                     code=RpcErrorCode.MethodNotFound,
@@ -521,7 +525,7 @@ class SlxJsonRpc:
                 id=data.id,
                 result=result,
             ))
-        return self._batch_filter(RpcError(
+        return self._batch_filter(RpcErrorWithId(
             jsonrpc=RpcVersion.v2_0,
             id=data.id,
             error=ErrorModel(

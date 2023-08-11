@@ -352,7 +352,7 @@ class ErrorModel(BaseModel):
         return RpcErrorCode(value)
 
 
-class RpcError(BaseModel):
+class RpcErrorWithId(BaseModel):
     """
     The default JsonRpc Error Reply Schema.
 
@@ -361,9 +361,25 @@ class RpcError(BaseModel):
         id:
         error:
     """
-    id: Union[str, int, None] = None
+    id: Union[str, int, None]
     jsonrpc: Optional[RpcVersion] = None
     error: ErrorModel
+
+
+class RpcErrorWithoutId(BaseModel):
+    """
+    The default JsonRpc Error Reply Schema.
+
+    Attributes:
+        jsonrpc:
+        id:
+        error:
+    """
+    jsonrpc: Optional[RpcVersion] = None
+    error: ErrorModel
+
+
+RpcError = Union[RpcErrorWithId, RpcErrorWithoutId]
 
 
 ###############################################################################
