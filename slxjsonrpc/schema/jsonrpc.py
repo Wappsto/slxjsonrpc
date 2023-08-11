@@ -95,7 +95,7 @@ class RpcRequest(BaseModel):
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     method: Union[Enum, str]
     id: Union[str, int] = Field(default_factory=lambda: _id_gen(name=rpc_get_name()))
     params: Optional[Any] = Field(default=None, validate_default=True)
@@ -155,7 +155,7 @@ class RpcNotification(BaseModel):
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     method: Union[Enum, str]
     params: Optional[Any] = Field(default=None, validate_default=True)
 
@@ -227,7 +227,7 @@ class RpcResponse(BaseModel):
         id: Must be the same value as the object this is a response to.
         result: The result of the Request object, if it did not fail.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     id: Union[str, int]
     result: Any = Field(validate_default=True)
 
@@ -362,7 +362,7 @@ class RpcError(BaseModel):
         error:
     """
     id: Union[str, int, None] = None
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     error: ErrorModel
 
 
