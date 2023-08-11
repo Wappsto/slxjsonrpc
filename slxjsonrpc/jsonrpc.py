@@ -472,8 +472,8 @@ class SlxJsonRpc:
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
                     message=RpcErrorMsg.InternalError,
-                    data=err.args[0]
-                )
+                    data=err.args[0],
+                ),
             ))
 
         return None
@@ -481,7 +481,9 @@ class SlxJsonRpc:
     def _error_reply_logic(self, data: RpcError) -> Optional[RpcError]:
         if data.id not in self._id_cb.keys():
             # NOTE: Triggers only if it was an error that we generated.
-            return data
+            # NOTE: Triggers if the server receives an error.
+            self.log.warning(f"Received an RpcError: {data}")
+            return
         self._id_cb.pop(data.id)
         if data.id not in self._id_error_cb.keys():
             self.log.warning(f"Unhanded error: {data}")
@@ -499,8 +501,8 @@ class SlxJsonRpc:
                 error=ErrorModel(
                     code=RpcErrorCode.MethodNotFound,
                     message=RpcErrorMsg.MethodNotFound,
-                    data=data.method
-                )
+                    data=data.method,
+                ),
             ))
         with self._except_handler():
             cb = self._method_cb[data.method]
@@ -517,7 +519,7 @@ class SlxJsonRpc:
             return self._batch_filter(RpcResponse(
                 jsonrpc=RpcVersion.v2_0,
                 id=data.id,
-                result=result
+                result=result,
             ))
         return self._batch_filter(RpcError(
             jsonrpc=RpcVersion.v2_0,
@@ -525,8 +527,8 @@ class SlxJsonRpc:
             error=ErrorModel(
                 code=RpcErrorCode.MethodNotFound,
                 message=RpcErrorMsg.MethodNotFound,
-                data=data.method
-            )
+                data=data.method,
+            ),
         ))
 
     def _response_reply_logic(self, data: RpcResponse) -> Optional[RpcResponse]:
