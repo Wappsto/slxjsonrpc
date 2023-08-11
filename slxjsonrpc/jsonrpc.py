@@ -174,7 +174,16 @@ class SlxJsonRpc:
         self.__batch_lock: int = 0
         self.__batched_list: List[RpcSchemas] = []
 
-        self.__parse_as_rpc_obj: TypeAdapter = TypeAdapter(RpcSchemas)  # type: ignore
+        self.__parse_rpc_obj_w_id: TypeAdapter = TypeAdapter(Union[
+            RpcError,
+            RpcRequest,
+            RpcResponse
+        ])  # type: ignore
+        self.__parse_rpc_obj_w_out_id: TypeAdapter = TypeAdapter(Union[
+            RpcError,
+            RpcNotification,
+            RpcResponse
+        ])  # type: ignore
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
@@ -572,8 +581,9 @@ class SlxJsonRpc:
         self,
         data: Dict[str, Any]
     ) -> RpcSchemas:
+        __parser = self.__parse_rpc_obj_w_id if 'id' in data.keys() else self.__parse_rpc_obj_w_out_id
         try:
-            p_data: RpcSchemas = self.__parse_as_rpc_obj.validate_python(data)
+            p_data: RpcSchemas = __parser.validate_python(data)
         except MethodError as error:
             raise RpcErrorException(
                 code=RpcErrorCode.MethodNotFound,
