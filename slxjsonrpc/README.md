@@ -11,6 +11,8 @@ Unsure
 Known Bugs
 -------------------------------------------------------------------------------
  * Can not have 2 independent slxJsonRpc running in same code base.
+ * If `exclude_unset` is false, the package will have: `"id":null` set.
+ * If `exclude_none` is True, the package will not have: `"result":null` set.
 
 
 TODO List
@@ -21,4 +23,4 @@ TODO List
  * [x] Push to pip.
  * [ ] Refactor so the same code can have multiple independent slxJsonRpc.
  * [x] Use case Examples.
- * [ ] Check if custom validation exceptions will, make the code simpler?
+ * [ ] Check if custom validation exceptions will make the code simpler?
