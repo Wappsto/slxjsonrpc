@@ -14,6 +14,9 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import field_validator
+# from pydantic import field_serializer
+# from pydantic import SerializerFunctionWrapHandler
+# from pydantic import FieldSerializationInfo
 from pydantic import FieldValidationInfo
 from pydantic import RootModel
 from pydantic import TypeAdapter
@@ -386,3 +389,7 @@ class RpcBatch(RootModel[List[RpcSchemas]]):
     def __getitem__(self, item: int) -> RpcSchemas:
         """For enabling list functionality."""
         return self.root[item]
+
+    def __len__(self) -> int:
+        """For retrieving the length."""
+        return len(self.root)
