@@ -2,6 +2,7 @@
 from enum import Enum
 
 from typing import List
+
 # from typing import Literal  # NOTE: Not possible in py37
 from typing import Union
 
@@ -15,6 +16,7 @@ from pydantic import ValidationError
 
 class MethodsTest(str, Enum):
     """The Enum of Methods for the SlXJsonRpc."""
+
     add = "add"
     ping = "ping"
     sub = "sub"
@@ -25,11 +27,13 @@ class TestSchema:
 
     def setup_method(self):
         """Setup the Schema mapping."""
-        jsonrpc_schema.set_params_map({
-            MethodsTest.add: List[Union[int, float]],
-            MethodsTest.sub: List[Union[int, float]],
-            MethodsTest.ping: None
-        })
+        jsonrpc_schema.set_params_map(
+            {
+                MethodsTest.add: List[Union[int, float]],
+                MethodsTest.sub: List[Union[int, float]],
+                MethodsTest.ping: None,
+            },
+        )
 
     @pytest.mark.parametrize(
         "method,data,should_trigger_exception",
@@ -42,7 +46,7 @@ class TestSchema:
             ["ping", [1, 2, 3], True],
             ["NOP", None, True],
             ["NOP", "Nop!", True],
-        ]
+        ],
     )
     def test_request(self, method, data, should_trigger_exception):
         """Test basic Request parsing."""
@@ -76,7 +80,7 @@ class TestSchema:
             ["ping", [1, 2, 3], True],
             ["NOP", None, True],
             ["NOP", "Nop!", True],
-        ]
+        ],
     )
     def test_notifications(self, method, data, should_trigger_exception):
         """Test basic Notification parsing."""

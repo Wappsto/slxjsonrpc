@@ -3,6 +3,7 @@ from enum import Enum
 
 from typing import Any
 from typing import List
+
 # from typing import Literal  # NOTE: Not possible in py37
 from typing import Union
 
@@ -13,6 +14,7 @@ import slxjsonrpc
 
 class MethodsTest(str, Enum):
     """The Enum of Methods for the SlXJsonRpc."""
+
     add = "add"
     ping = "ping"
     sub = "sub"
@@ -35,7 +37,7 @@ class TestSlxJsonRpc:
         def custom_error(*args, **kwargs):
             raise slxjsonrpc.RpcErrorException(
                 code=self.error_code,
-                msg="Just some Error!"
+                msg="Just some Error!",
             )
 
         params = {
@@ -81,7 +83,7 @@ class TestSlxJsonRpc:
             ["ping", None, "pong"],
             ["add", [1, 2, 3], 6],
             ["sub", [1, 2, 3], -4],
-        ]
+        ],
     )
     def test_request_happy_flow(self, method, params, result):
         """Testing the Request Happy Flow."""
@@ -107,7 +109,7 @@ class TestSlxJsonRpc:
         [
             ["tweet", "Trumphy", "Trumphy"],
             ["tweet", 1, 1],
-        ]
+        ],
     )
     def test_notification_happy_flow(self, method, params, result):
         """Testing the Request Happy Flow."""
@@ -137,7 +139,7 @@ class TestSlxJsonRpc:
             [-32000, '{"jsonrpc": "2.0", "method": "crash", "id": "12342"}'],
             [-32000, '{"jsonrpc": "2.0", "method": "crash"}'],
             # [-32099, ''],
-        ]
+        ],
     )
     def test_request_errors(self, data, error_code):
         """Testing the Request Happy Flow."""
@@ -146,10 +148,7 @@ class TestSlxJsonRpc:
         assert s_data.error.code.value == error_code
 
     @pytest.mark.skip(reason="TBW!")
-    @pytest.mark.parametrize(
-        "error_code, transformer",
-        [(1, 2)]
-    )
+    @pytest.mark.parametrize("error_code, transformer", [(1, 2)])
     def test_return_types(self, error_code, transformer):
         """Testing if the return type is the right one."""
         error_obj = None
@@ -173,30 +172,60 @@ class TestSlxJsonRpc:
             [MethodsTest.ping, None],
             [MethodsTest.add, [1, 2, 3]],
             [MethodsTest.sub, [1, 2, 3]],
-        ]
+        ],
     )
     @pytest.mark.parametrize(
         "error_code, transformer",
         [
-            [-32700, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32700, "message": "", "data": "k"}
-                                   }],
-            [-32600, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32600, "message": "", "data": "k"}
-                                   }],
-            [-32601, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32601, "message": "", "data": "k"}
-                                   }],
-            [-32602, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32602, "message": "", "data": "k"}
-                                   }],
-            [-32603, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32603, "message": "", "data": "k"}
-                                   }],
-            [-32000, lambda data: {"jsonrpc": "2.0", "id": data.id, "error":
-                                   {"code": -32000, "message": "", "data": "k"}
-                                   }],
-        ]
+            [
+                -32700,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32700, "message": "", "data": "k"},
+                },
+            ],
+            [
+                -32600,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32600, "message": "", "data": "k"},
+                },
+            ],
+            [
+                -32601,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32601, "message": "", "data": "k"},
+                },
+            ],
+            [
+                -32602,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32602, "message": "", "data": "k"},
+                },
+            ],
+            [
+                -32603,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32603, "message": "", "data": "k"},
+                },
+            ],
+            [
+                -32000,
+                lambda data: {
+                    "jsonrpc": "2.0",
+                    "id": data.id,
+                    "error": {"code": -32000, "message": "", "data": "k"},
+                },
+            ],
+        ],
     )
     def test_error_response(self, method, params, error_code, transformer):
         """Testing handling of the response, when receiving an RpcError."""
@@ -229,32 +258,33 @@ class TestSlxJsonRpc:
 
     def test_send_bulk(self):
         """Test is the Bulking works as intended."""
-        c_data = self.client.create_request(
-            method=MethodsTest.crash,
-            callback=lambda data: None,
-            error_callback=lambda data: None
-        )
-        with self.server.batch():
-            s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
-            assert s_data is None
-            s_data = self.server.create_request(
-                method=MethodsTest.crash,
-                callback=lambda data: None,
+        cb_data = None
+
+        def cb(data):
+            print(f"data: {data}")
+            nonlocal cb_data
+            cb_data = data
+
+        with self.client.batch():
+            s_data = self.client.create_request(
+                method=MethodsTest.add, callback=cb, params=[1, 2, 3]
             )
             assert s_data is None
 
-            s_data = self.server.create_notification(
-                method=MethodsTest.ping,
-            )
+            s_data = self.client.create_notification(method=MethodsTest.ping)
             assert s_data is None
 
-        assert self.server.batch_size() == 3
+        assert self.client.batch_size() == 2
 
-        s_data = self.server.get_batch_data()
+        c_data = self.client.get_batch_data()
         # print(f"{s_data.model_dump_json(exclude_none=True)}")
-        self.client.parser(s_data.model_dump_json(exclude_none=True))
+        s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
         # print(data)
-        # assert False
+        assert len(s_data) == 1
+
+        c_l_data = self.client.parser(s_data.model_dump_json(exclude_none=True))
+        assert c_l_data is None
+        assert cb_data == 6
 
     def test_received_bulk(self):
         """Test if the Bulking receiving works as intended."""
@@ -270,7 +300,11 @@ class TestSlxJsonRpc:
         self.error_code = error_code
         msg = '{"jsonrpc": "2.0", "method": "error", "id": "12342"}'
         error_obj = self.client.parser(msg)
-        obj_code = error_obj.error.code if isinstance(error_obj.error.code, int) else error_obj.error.code.value
+        obj_code = (
+            error_obj.error.code
+            if isinstance(error_obj.error.code, int)
+            else error_obj.error.code.value
+        )
         assert obj_code == error_code
 
     def test_unknown_id(self):
