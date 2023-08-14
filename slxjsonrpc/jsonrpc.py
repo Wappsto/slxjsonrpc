@@ -176,15 +176,15 @@ class SlxJsonRpc:
         self.__batch_lock: int = 0
         self.__batched_list: List[RpcSchemas] = []
 
-        self.__parse_rpc_obj_w_id: TypeAdapter = TypeAdapter(Union[
+        self.__parse_rpc_obj_w_id: TypeAdapter = TypeAdapter(Union[  # type: ignore
             RpcRequest,
             RpcResponse,
             RpcErrorWithId,
-        ])  # type: ignore
-        self.__parse_rpc_obj_w_out_id: TypeAdapter = TypeAdapter(Union[
+        ])
+        self.__parse_rpc_obj_w_out_id: TypeAdapter = TypeAdapter(Union[  # type: ignore
             RpcNotification,
             RpcErrorWithoutId,
-        ])  # type: ignore
+        ])
 
         self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
 
@@ -328,6 +328,7 @@ class SlxJsonRpc:
             self.__batched_list.append(data)
         batched_data = self.__batched_list.copy()
         self.__batched_list.clear()
+        # UNSURE: Is it required to return a batch of 1, if it was received as batch of 1?
         if len(batched_data) == 1:
             return batched_data[0]
         batch_obj: RpcBatch = RpcBatch.model_validate(batched_data)
@@ -478,16 +479,14 @@ class SlxJsonRpc:
                 ),
             ))
 
-        return None
-
     def _error_reply_logic(self, data: RpcError) -> Optional[RpcError]:
         if not hasattr(data, 'id'):
-            return
+            return None
         if data.id not in self._id_cb.keys():
             # NOTE: Triggers only if it was an error that we generated.
             # NOTE: Triggers if the server receives an error.
             self.log.warning(f"Received an RpcError: {data}")
-            return
+            return None
         self._id_cb.pop(data.id)
         if data.id not in self._id_error_cb.keys():
             self.log.warning(f"Unhanded error: {data}")
