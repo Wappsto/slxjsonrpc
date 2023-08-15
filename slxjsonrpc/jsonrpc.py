@@ -328,7 +328,7 @@ class SlxJsonRpc:
             self.__batched_list.append(data)
         batched_data = self.__batched_list.copy()
         self.__batched_list.clear()
-        # UNSURE: Is it required to return a batch of 1, if it was received as batch of 1?
+        # NOTE: No need to return a batch of one, if we can avoid it.
         if len(batched_data) == 1:
             return batched_data[0]
         batch_obj: RpcBatch = RpcBatch.model_validate(batched_data)
@@ -475,7 +475,7 @@ class SlxJsonRpc:
                 error=ErrorModel(
                     code=RpcErrorCode.InternalError,
                     message=RpcErrorMsg.InternalError,
-                    data=err.args[0],
+                    data=err.args[0],  # UNSURE: Is this a security problem?
                 ),
             ))
 
@@ -504,7 +504,7 @@ class SlxJsonRpc:
                 error=ErrorModel(
                     code=RpcErrorCode.MethodNotFound,
                     message=RpcErrorMsg.MethodNotFound,
-                    data=data.method,
+                    data=f"No Callback exists for given method: {data.method}.",
                 ),
             ))
         with self._except_handler():
@@ -524,13 +524,14 @@ class SlxJsonRpc:
                 id=data.id,
                 result=result,
             ))
+        # NOTE: Only triggered if no Callback for a given 'Method'.
         return self._batch_filter(RpcErrorWithId(
             jsonrpc=RpcVersion.v2_0,
             id=data.id,
             error=ErrorModel(
                 code=RpcErrorCode.MethodNotFound,
                 message=RpcErrorMsg.MethodNotFound,
-                data=data.method,
+                data=f"No Callback exists for given method: {data.method}.",
             ),
         ))
 
@@ -580,6 +581,7 @@ class SlxJsonRpc:
                 data=type_error[0]
             )
 
+        # NOTE: Do not think if is possible to trigger!
         return None
 
     def _parse_data(
@@ -600,8 +602,9 @@ class SlxJsonRpc:
                 errors=error.errors()
             )
 
+            # NOTE: Do not think if is possible to trigger!
+            # TODO: Testing needed to trigger this!
             if not error_package:
-                # TODO: Testing needed to trigger this!
                 self.log.exception(f"Unhanded ValidationError: {data}")
                 raise
 
