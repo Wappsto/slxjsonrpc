@@ -458,237 +458,49 @@ class TestSlxJsonRpc:
         assert error is not None
         assert error.code == code
 
-    # @pytest.mark.parametrize(
-    #     "method,params,result",
-    #     [
-    #         ["tweet", "Trumphy", "Trumphy"],
-    #         ["tweet", 1, 1],
-    #     ],
-    # )
-    # def test_notification_happy_flow(self, method, params, result):
-    #     """Testing the Request Happy Flow."""
-    #     c_data = self.client.create_notification(
-    #         method=method,
-    #         params=params
-    #     )
-
-    #     s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
-
-    #     assert s_data is None
-    #     assert self.tweet_data == result
-
-    # @pytest.mark.parametrize(
-    #     "error_code,data",
-    #     [
-    #         [-32700, '{"jsonrpc": "2.0", "method"'],
-    #         [-32700, ""],
-    #         [-32600, "[]"],
-    #         [-32600, '{"foo": "boo"}'],
-    #         [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!", "id": "1q"}'],
-    #         [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!"}'],
-    #         [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1", "params": "NOP!"}'],
-    #         [-32602, '{"jsonrpc": "2.0", "method": "add", "params": "NOP!"}'],
-    #         [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1"}'],
-    #         [-32602, '{"jsonrpc": "2.0", "method": "add"}'],
-    #         [-32000, '{"jsonrpc": "2.0", "method": "crash", "id": "12342"}'],
-    #         [-32000, '{"jsonrpc": "2.0", "method": "crash"}'],
-    #         # [-32099, ''],
-    #     ],
-    # )
-    # def test_request_errors(self, data, error_code):
-    #     """Testing the Request Happy Flow."""
-    #     s_data = self.server.parser(data)
-    #     print(f"{s_data}")
-    #     assert s_data.error.code.value == error_code
-
-    # @pytest.mark.skip(reason="TBW!")
-    # @pytest.mark.parametrize("error_code, transformer", [(1, 2)])
-    # def test_return_types(self, error_code, transformer):
-    #     """Testing if the return type is the right one."""
-    #     error_obj = None
-
-    #     def set_data(temp):
-    #         nonlocal error_obj
-    #         error_obj = temp
-
-    #     c_data = self.client.create_request()
-    #     s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
-    #     e_data = transformer(s_data)
-    #     r_data = self.client.parser(e_data)
-
-    #     assert r_data is None
-
-    #     assert error_obj.code.value == error_code
-
-    # @pytest.mark.parametrize(
-    #     "method,params",
-    #     [
-    #         [MethodsTest.ping, None],
-    #         [MethodsTest.add, [1, 2, 3]],
-    #         [MethodsTest.sub, [1, 2, 3]],
-    #     ],
-    # )
-    # @pytest.mark.parametrize(
-    #     "error_code, transformer",
-    #     [
-    #         [
-    #             -32700,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32700, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #         [
-    #             -32600,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32600, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #         [
-    #             -32601,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32601, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #         [
-    #             -32602,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32602, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #         [
-    #             -32603,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32603, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #         [
-    #             -32000,
-    #             lambda data: {
-    #                 "jsonrpc": "2.0",
-    #                 "id": data.id,
-    #                 "error": {"code": -32000, "message": "", "data": "k"},
-    #             },
-    #         ],
-    #     ],
-    # )
-    # def test_error_response(self, method, params, error_code, transformer):
-    #     """Testing handling of the response, when receiving an RpcError."""
-    #     error_obj = None
-    #     data_obj = None
-
-    #     def set_error(temp):
-    #         nonlocal error_obj
-    #         error_obj = temp
-
-    #     def set_data(temp):
-    #         nonlocal data_obj
-    #         data_obj = temp
-
-    #     c_data = self.client.create_request(
-    #         method=method,
-    #         params=params,
-    #         callback=set_data,
-    #         error_callback=set_error
-    #     )
-    #     s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
-    #     e_data = transformer(s_data)
-    #     r_data = self.client.parser(e_data)
-
-    #     print(f"{r_data}")
-
-    #     assert r_data is None
-    #     assert data_obj is None
-    #     assert error_obj.code.value == error_code
-
-    # def test_received_bulk(self):
-    #     """Test if the Bulking receiving works as intended."""
-    #     pass
-
-    # @pytest.mark.parametrize(
-    #     "error_code",
-    #     # list(range(-32099, -32000 + 1)),
-    #     [-32099, -32050, -32000],
-    # )
-    # def test_custom_error_response(self, error_code):
-    #     """Test if the custom error response works as intended."""
-    #     self.error_code = error_code
-    #     msg = '{"jsonrpc": "2.0", "method": "error", "id": "12342"}'
-    #     error_obj = self.client.parser(msg)
-    #     obj_code = (
-    #         error_obj.error.code
-    #         if isinstance(error_obj.error.code, int)
-    #         else error_obj.error.code.value
-    #     )
-    #     assert obj_code == error_code
-
-    # def test_unknown_id(self):
-    #     """Test if the received jsonRps id is unknown."""
-    #     pass
-
-    # @pytest.mark.parametrize(
-    #     "exclude_unset",
-    #     [
-    #         True,
-    #         False,
-    #     ],
-    # )
-    # @pytest.mark.parametrize(
-    #     "exclude_none", [
-    #         True,
-    #         # False,
-    #     ],
-    # )
-    # @pytest.mark.parametrize(
-    #     "exclude_defaults", [
-    #         True,
-    #         False,
-    #     ],
-    # )
-    # @pytest.mark.parametrize(
-    #     "method,params,data_out",
-    #     [
-    #         [
-    #             "NOP!",
-    #             [1, 2, 3],
-    #             ' '
-    #         ],
-    #     ],
-    # )
-    # def test_notificatest_input_errortion(
-    #     self,
-    #     method,
-    #     params,
-    #     data_out,
-    #     exclude_unset,
-    #     exclude_none,
-    #     exclude_defaults,
-    # ):
-    #     """Testing the Request Happy Flow."""
-    #     c_data = self.client.create_notification(
-    #         method=method,
-    #         params=params,
-    #     )
-
-    #     assert c_data is not None
-
-    #     r_data = c_data.model_dump_json(
-    #         exclude_unset=exclude_unset,
-    #         exclude_none=exclude_none,
-    #         exclude_defaults=exclude_defaults,
-    #     )
-
-    #     assert r_data == data_out
-
     def test_callback_example(self):
         """Just to get the code Coverage for the function example."""
         slxjsonrpc.jsonrpc.method_callback_example(1)
+
+    @pytest.mark.parametrize(
+        "method,params",
+        [
+            [
+                "ping",
+                'Shoudl\'tBeHere',
+            ],
+        ],
+    )
+    def test_misconfigured_request(
+        self,
+        method,
+        params,
+    ):
+        """Testing the Request Happy Flow."""
+        with pytest.raises(ValueError):
+            self.client.create_request(
+                method=method,
+                params=params,
+                callback=lambda data: None
+            )
+
+    @pytest.mark.parametrize(
+        "method,params",
+        [
+            [
+                "ping",
+                'Shoudl\'tBeHere',
+            ],
+        ],
+    )
+    def test_misconfigured_notification(
+        self,
+        method,
+        params,
+    ):
+        """Testing the Request Happy Flow."""
+        with pytest.raises(ValueError):
+            self.client.create_notification(
+                method=method,
+                params=params,
+            )
