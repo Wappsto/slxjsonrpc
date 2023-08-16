@@ -133,8 +133,8 @@ class RpcRequest(BaseModel):
 
         model = _params_mapping[info.data['method']]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
@@ -187,8 +187,8 @@ class RpcNotification(BaseModel):
 
         model = _params_mapping[info.data['method']]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
@@ -246,7 +246,7 @@ class RpcResponse(BaseModel):
         the_id = info.data.get('id')
 
         if the_id not in _id_mapping:
-            # UNSURE (MBK): What should done, when it was not meant for this receiver?
+            # UNSURE (MBK): What should it do, when it was not meant for this receiver?
             return v
 
         the_method = _id_mapping[the_id]
@@ -256,8 +256,8 @@ class RpcResponse(BaseModel):
 
         model = _result_mapping[the_method]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
