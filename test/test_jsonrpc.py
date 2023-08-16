@@ -11,6 +11,14 @@ import pytest
 
 import slxjsonrpc
 
+from pydantic import BaseModel
+
+
+class Point(BaseModel):
+    """Coordinate Point Object."""
+    x: int
+    y: int
+
 
 class MethodsTest(str, Enum):
     """The Enum of Methods for the SlXJsonRpc."""
@@ -21,6 +29,7 @@ class MethodsTest(str, Enum):
     crash = "crash"
     tweet = "tweet"
     error = "error"
+    point = "point"
 
 
 class TestSlxJsonRpc:
@@ -47,6 +56,7 @@ class TestSlxJsonRpc:
             MethodsTest.crash: None,
             MethodsTest.tweet: Any,
             MethodsTest.error: Any,
+            MethodsTest.point: Point,
         }
         result = {
             MethodsTest.add: Union[int, float],
@@ -55,6 +65,7 @@ class TestSlxJsonRpc:
             MethodsTest.crash: int,
             MethodsTest.tweet: None,
             MethodsTest.error: None,
+            MethodsTest.point: Point,
         }
         method_map = {
             MethodsTest.add: lambda data: sum(data),
@@ -63,6 +74,7 @@ class TestSlxJsonRpc:
             MethodsTest.crash: lambda *args: "*beep*" - 42,
             MethodsTest.tweet: lambda data: tweeting(data),
             MethodsTest.error: custom_error,
+            MethodsTest.point: lambda data: Point(x=data.x * 2, y=data.y * 2),
         }
         self.server = slxjsonrpc.SlxJsonRpc(
             methods=MethodsTest,
@@ -83,6 +95,7 @@ class TestSlxJsonRpc:
             ["ping", None, "pong"],
             ["add", [1, 2, 3], 6],
             ["sub", [1, 2, 3], -4],
+            ['point', Point(x=1, y=2), Point(x=2, y=4)],
         ],
     )
     def test_request_happy_flow(self, method, params, result):
@@ -109,6 +122,7 @@ class TestSlxJsonRpc:
         [
             ["tweet", "Trumphy", "Trumphy"],
             ["tweet", 1, 1],
+            ['point', Point(x=1, y=2), None],
         ],
     )
     def test_notification_happy_flow(self, method, params, result):
@@ -121,7 +135,8 @@ class TestSlxJsonRpc:
         s_data = self.server.parser(c_data.model_dump_json(exclude_none=True))
 
         assert s_data is None
-        assert self.tweet_data == result
+        if result:
+            assert self.tweet_data == result
 
     @pytest.mark.parametrize(
         "error_code,data",
