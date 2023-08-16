@@ -6,3 +6,4 @@ pydantic==2.1.1
 tox==4.6.4
 twine==4.0.2
 wheel==0.41.0
+pytest==7.4.0
