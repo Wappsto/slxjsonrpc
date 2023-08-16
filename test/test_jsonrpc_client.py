@@ -265,6 +265,13 @@ class TestSlxJsonRpc:
             assert data is None
             return
 
+        if isinstance(data, slxjsonrpc.RpcBatch):
+            assert data[0]
+            count = 0
+            for x in data:
+                count += 1
+            assert count == len(data)
+
         r_data = data.model_dump_json(
             exclude_unset=exclude_unset,
             exclude_none=exclude_none,
@@ -334,6 +341,13 @@ class TestSlxJsonRpc:
         if data_out is None:
             assert data is None
             return
+
+        if isinstance(data, slxjsonrpc.RpcBatch):
+            assert data[0]
+            count = 0
+            for x in data:
+                count += 1
+            assert count == len(data)
 
         r_data = data.model_dump_json(
             exclude_unset=exclude_unset,
