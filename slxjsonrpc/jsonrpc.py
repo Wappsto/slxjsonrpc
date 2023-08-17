@@ -451,7 +451,7 @@ class SlxJsonRpc:
 
     def __reply_logic(
         self,
-        p_data: RpcSchemas
+        p_data: Optional[RpcSchemas]
     ) -> Optional[Union[RpcResponse, RpcError]]:
         if p_data is None:
             # NOTE: Should be from Error on Notification Parsing.
@@ -606,7 +606,7 @@ class SlxJsonRpc:
     def _parse_data(
         self,
         data: Dict[str, Any]
-    ) -> RpcSchemas:
+    ) -> Optional[RpcSchemas]:
         if 'jsonrpc' not in data.keys():
             raise RpcErrorException(
                 code=RpcErrorCode.InvalidRequest,
@@ -635,6 +635,8 @@ class SlxJsonRpc:
             return p_data
         else:
             try:
-                return self.__parse_rpc_obj_w_out_id.validate_python(data)
+                result: RpcNotification = self.__parse_rpc_obj_w_out_id.validate_python(data)
+                return result
             except Exception:
                 self.log.exception("Error occurred doing Notification parsing.")
+                return None
