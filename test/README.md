@@ -27,3 +27,8 @@ TODO List
  * [ ] Test where both client & server is used, at the same time.
  * [ ] Test if the IDs are in sequential order.
  * [ ] Make a [Specification](https://www.jsonrpc.org/specification) only test.
+ * [ ] Client/Server test that cover: `batch_size`.
+ * [ ] Client/Server test that cover: `parser` with Dictionary.
+ * [ ] Client/Server test that cover: `parser` with None.
+ * [ ] Client/Server test that cover: valid `Responce`.
+ * [ ] Client/Server test that cover: RpcErrorException on cb.

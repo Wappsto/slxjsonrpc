@@ -56,9 +56,8 @@ TODO List
 -------------------------------------------------------------------------------
 **Code base**
  * [ ] Add more/better logging logs.
- * [x] Enforce the result Schema. schema/jsonrpc.py:217-225
- * [x] Push to pip.
  * [ ] Refactor so the same code can have multiple independent slxJsonRpc.
- * [x] Use case Examples.
  * [ ] Check if custom validation exceptions will make the code simpler?
- * [ ] No RpcError on Notifications.
+ * [x] No RpcError on Notifications.
+ * [ ] RpcResponse should always have the `result`-key.
+ * [ ] RpcError should always have the `id`-key.
