@@ -26,3 +26,4 @@ TODO List
  * [x] Test with params as pydantic BaseModel.
  * [ ] Test where both client & server is used, at the same time.
  * [ ] Test if the IDs are in sequential order.
+ * [ ] Make a [Specification](https://www.jsonrpc.org/specification) only test.

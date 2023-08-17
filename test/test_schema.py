@@ -98,7 +98,7 @@ class TestSchema:
         ]
     )
     def test_Response(self, method, the_id, result, data_out):
-        """For testing the Notification if no params where set."""
+        """."""
         jsonrpc_schema.set_id_mapping({the_id: method})
         jsonrpc_schema.set_result_map({method: type(result)})
         try:
@@ -290,7 +290,7 @@ class TestSchema:
         ]
     )
     def test_no_mapping_notification(self, method, params, data_out):
-        """For testing the Notification if no params where set."""
+        """For test Notification if no method to params mapping where set."""
         jsonrpc_schema.set_params_map({})
         try:
             r_data = jsonrpc_schema.RpcNotification(
@@ -314,7 +314,7 @@ class TestSchema:
         ]
     )
     def test_no_mapping_Response(self, the_id, result, data_out):
-        """For testing the Notification if no params where set."""
+        """."""
         jsonrpc_schema.set_id_mapping({})
         jsonrpc_schema.set_result_map({})
 
@@ -337,7 +337,7 @@ class TestSchema:
         ]
     )
     def test_error_config_Response(self, the_id, result, data_out):
-        """For testing the Notification if no params where set."""
+        """."""
         jsonrpc_schema.set_id_mapping({the_id: 'FAKE_METHOD'})
         jsonrpc_schema.set_result_map({'FAKE_METHOD': None})
 
@@ -363,7 +363,7 @@ class TestSchema:
         ]
     )
     def test_missing_mapping_Response(self, the_id, result, data_out):
-        """For testing the Notification if no params where set."""
+        """."""
         jsonrpc_schema.set_id_mapping({the_id: 'FAKE_METHOD'})
         jsonrpc_schema.set_result_map({MethodsTest.point: Point})
 
