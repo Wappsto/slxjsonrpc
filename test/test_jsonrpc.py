@@ -146,13 +146,13 @@ class TestSlxJsonRpc:
             [-32600, "[]"],
             [-32600, '{"foo": "boo"}'],
             [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!", "id": "1q"}'],
-            [-32601, '{"jsonrpc": "2.0", "method": "NOWHERE!"}'],
+            [None, '{"jsonrpc": "2.0", "method": "NOWHERE!"}'],
             [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1", "params": "NOP!"}'],
-            [-32602, '{"jsonrpc": "2.0", "method": "add", "params": "NOP!"}'],
+            [None, '{"jsonrpc": "2.0", "method": "add", "params": "NOP!"}'],
             [-32602, '{"jsonrpc": "2.0", "method": "add", "id": "s1"}'],
-            [-32602, '{"jsonrpc": "2.0", "method": "add"}'],
+            [None, '{"jsonrpc": "2.0", "method": "add"}'],
             [-32000, '{"jsonrpc": "2.0", "method": "crash", "id": "12342"}'],
-            [-32000, '{"jsonrpc": "2.0", "method": "crash"}'],
+            [None, '{"jsonrpc": "2.0", "method": "crash"}'],
             # [-32099, ''],
         ],
     )
@@ -160,7 +160,10 @@ class TestSlxJsonRpc:
         """Testing the Request Happy Flow."""
         s_data = self.server.parser(data)
         print(f"{s_data}")
-        assert s_data.error.code.value == error_code
+        if error_code is None:
+            assert s_data is None
+        else:
+            assert s_data.error.code.value == error_code
 
     @pytest.mark.skip(reason="TBW!")
     @pytest.mark.parametrize("error_code, transformer", [(1, 2)])

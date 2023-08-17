@@ -386,9 +386,7 @@ class TestSlxJsonRpc:
                 (
                     '{"id":"the_id","jsonrpc":"2.0","error":'
                     '{"code":-32000,'
-                    '"message":"Internal server error.",'
-                    '"data":"unsupported operand type(s) for -:'
-                    ' \'str\' and \'int\'"}}'
+                    '"message":"Internal server error."}}'
                 ),
                 -32000,
             ],
@@ -399,9 +397,7 @@ class TestSlxJsonRpc:
                 (
                     '{"id":"the_id","jsonrpc":"2.0","error":'
                     '{"code":-32000,'
-                    '"message":"Internal server error.",'
-                    '"data":"unsupported operand type(s) for -:'
-                    ' \'str\' and \'int\'"}}'
+                    '"message":"Internal server error."}}'
                 ),
                 None,
             ],
