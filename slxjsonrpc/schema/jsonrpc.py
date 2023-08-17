@@ -178,9 +178,9 @@ class RpcNotification(BaseModel):
         if not _params_mapping.keys():
             return v
 
-        if info.data.get('method') is None:
-            # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
-            return v
+        # if info.data.get('method') is None:
+        #     # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
+        #     return v
 
         if info.data.get('method') not in _params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
@@ -352,7 +352,7 @@ class ErrorModel(BaseModel):
         return RpcErrorCode(value)
 
 
-class RpcErrorWithId(BaseModel):
+class RpcError(BaseModel):
     """
     The default JsonRpc Error Reply Schema.
 
@@ -364,22 +364,6 @@ class RpcErrorWithId(BaseModel):
     id: Union[str, int, None]
     jsonrpc: Optional[RpcVersion] = None
     error: ErrorModel
-
-
-class RpcErrorWithoutId(BaseModel):
-    """
-    The default JsonRpc Error Reply Schema.
-
-    Attributes:
-        jsonrpc:
-        id:
-        error:
-    """
-    jsonrpc: Optional[RpcVersion] = None
-    error: ErrorModel
-
-
-RpcError = Union[RpcErrorWithId, RpcErrorWithoutId]
 
 
 ###############################################################################
