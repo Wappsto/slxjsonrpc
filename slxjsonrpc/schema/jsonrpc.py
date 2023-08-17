@@ -14,6 +14,9 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import field_validator
+# from pydantic import field_serializer
+# from pydantic import SerializerFunctionWrapHandler
+# from pydantic import FieldSerializationInfo
 from pydantic import FieldValidationInfo
 from pydantic import RootModel
 from pydantic import TypeAdapter
@@ -22,6 +25,7 @@ from pydantic.fields import FieldInfo
 
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Type
@@ -72,13 +76,13 @@ class RpcVersion(str, Enum):
 #                             JsonRpc Request Object
 ###############################################################################
 
-params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
 
 def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
-    global params_mapping
-    params_mapping = mapping
+    global _params_mapping
+    _params_mapping = mapping
 
 
 class RpcRequest(BaseModel):
@@ -91,7 +95,7 @@ class RpcRequest(BaseModel):
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     method: Union[Enum, str]
     id: Union[str, int] = Field(default_factory=lambda: _id_gen(name=rpc_get_name()))
     params: Optional[Any] = Field(default=None, validate_default=True)
@@ -115,22 +119,22 @@ class RpcRequest(BaseModel):
     @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global params_mapping
+        global _params_mapping
 
-        if not params_mapping.keys():
+        if not _params_mapping.keys():
             return v
 
         if info.data.get('method') is None:
             # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
             return v
 
-        if info.data.get('method') not in params_mapping.keys():
+        if info.data.get('method') not in _params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data['method']]
+        model = _params_mapping[info.data['method']]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
@@ -151,7 +155,7 @@ class RpcNotification(BaseModel):
         method: The name of the method to be invoked.
         params: (Optional) The input parameters for the invoked method.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     method: Union[Enum, str]
     params: Optional[Any] = Field(default=None, validate_default=True)
 
@@ -169,22 +173,22 @@ class RpcNotification(BaseModel):
     @field_validator("params")
     def method_params_mapper(cls, v: Optional[Any], info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global params_mapping
+        global _params_mapping
 
-        if not params_mapping.keys():
+        if not _params_mapping.keys():
             return v
 
-        if info.data.get('method') is None:
-            # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
-            return v
+        # if info.data.get('method') is None:
+        #     # UNSURE: Why is this needed, when MethodError is use instead of ValueError? o.0
+        #     return v
 
-        if info.data.get('method') not in params_mapping.keys():
+        if info.data.get('method') not in _params_mapping.keys():
             raise MethodError(f"Unknown method: {info.data.get('method')}.")
 
-        model = params_mapping[info.data['method']]
+        model = _params_mapping[info.data['method']]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
@@ -198,21 +202,21 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
 
-id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
+_id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
 
 
 def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None:
     """Set the id to method mapping."""
-    global id_mapping
-    id_mapping = mapping
+    global _id_mapping
+    _id_mapping = mapping
 
 
 def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
-    global result_mapping
-    result_mapping = mapping
+    global _result_mapping
+    _result_mapping = mapping
 
 
 class RpcResponse(BaseModel):
@@ -223,7 +227,7 @@ class RpcResponse(BaseModel):
         id: Must be the same value as the object this is a response to.
         result: The result of the Request object, if it did not fail.
     """
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    jsonrpc: Optional[RpcVersion] = None
     id: Union[str, int]
     result: Any = Field(validate_default=True)
 
@@ -233,27 +237,27 @@ class RpcResponse(BaseModel):
     @field_validator("result", mode='before')
     def method_params_mapper(cls, v: Any, info: FieldValidationInfo) -> Any:
         """Check & enforce the params schema, depended on the method value."""
-        global result_mapping
-        global method_id_mapping
+        global _result_mapping
+        global _id_mapping
 
-        if not result_mapping.keys():
+        if not _result_mapping.keys():
             return v
 
         the_id = info.data.get('id')
 
-        if the_id not in id_mapping:
-            # UNSURE (MBK): What should done, when it was not meant for this receiver?
+        if the_id not in _id_mapping:
+            # UNSURE (MBK): What should it do, when it was not meant for this receiver?
             return v
 
-        the_method = id_mapping[the_id]
+        the_method = _id_mapping[the_id]
 
-        if the_method not in result_mapping.keys():
+        if the_method not in _result_mapping.keys():
             raise ValueError(f"Not valid params for method: {info.data.get('method')}.")
 
-        model = result_mapping[the_method]
+        model = _result_mapping[the_method]
 
-        if isinstance(model, BaseModel):
-            return model.model_validate(v)
+        # if isinstance(model, BaseModel):
+        #     return model.model_validate(v)
 
         if model is not None:
             model_converter: TypeAdapter = TypeAdapter(model)  # type: ignore
@@ -357,8 +361,8 @@ class RpcError(BaseModel):
         id:
         error:
     """
-    id: Union[str, int, None] = None
-    jsonrpc: Optional[RpcVersion] = RpcVersion.v2_0
+    id: Union[str, int, None]
+    jsonrpc: Optional[RpcVersion] = None
     error: ErrorModel
 
 
@@ -366,11 +370,26 @@ class RpcError(BaseModel):
 #                             JsonRpc Batch Object
 ###############################################################################
 
-class RpcBatch(RootModel[List[Union[RpcRequest, RpcNotification, RpcResponse, RpcError]]]):
+RpcSchemas = Union[
+    RpcError,
+    RpcNotification,
+    RpcRequest,
+    RpcResponse
+]
+
+
+class RpcBatch(RootModel[List[RpcSchemas]]):
     """The Default JsonRpc Batch Schema."""
-    root: List[Union[
-        RpcRequest,
-        RpcNotification,
-        RpcResponse,
-        RpcError,
-    ]] = Field(..., min_length=1)
+    root: List[RpcSchemas] = Field(..., min_length=1)
+
+    def __iter__(self) -> Iterator[RpcSchemas]:  # type: ignore[override]
+        """For enabling list functionality."""
+        return iter(self.root)
+
+    def __getitem__(self, item: int) -> RpcSchemas:
+        """For enabling list functionality."""
+        return self.root[item]
+
+    def __len__(self) -> int:
+        """For retrieving the length."""
+        return len(self.root)

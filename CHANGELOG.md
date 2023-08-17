@@ -1,3 +1,17 @@
+v0.9.2 (August 17, 2023)
+===============================================================================
+
+## Added
+ * RcpBatch is now iterable and behave more list a list.
+
+## Fixed
+ * Type hinting errors.
+ * Most issues where the wrong combo of `exclude_unset` & `exclude_none` given to `model_dump_json` would result in a invalid JsonRpc.
+
+## Changed
+ * Notifications can now not trigger an Error Rpc reply. as per the specification.
+
+
 v0.9.1 (August 4, 2023)
 ===============================================================================
 
