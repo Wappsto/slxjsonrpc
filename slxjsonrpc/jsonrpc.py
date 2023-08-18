@@ -49,6 +49,11 @@ class RpcErrorException(Exception):
     Attributes:
         Initializing with a msg & code arguments.
     """
+
+    code: Union[int, RpcErrorCode]
+    msg: str
+    data: Optional[Any]
+
     def __init__(
         self,
         code: Union[int, RpcErrorCode],
@@ -138,12 +143,14 @@ class SlxJsonRpc:
     To enable the JsonRpc-server, the method_cb need to be given.
     """
 
+    log: logging.Logger
+
     def __init__(
         self,
-        methods: Optional[Enum] = None,
-        method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = None,
-        result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
-        params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = None,
+        methods: Optional[Type[Enum]] = None,
+        method_cb: Optional[Dict[str, Callable[[Any], Any]]] = None,
+        result: Optional[Dict[str, Union[type, Type[Any]]]] = None,
+        params: Optional[Dict[str, Union[type, Type[Any]]]] = None,
         verbose_errors: bool = False,
     ):
         """
@@ -184,17 +191,17 @@ class SlxJsonRpc:
         ])
         self.__parse_rpc_obj_w_out_id: TypeAdapter = TypeAdapter(RpcNotification)  # type: ignore
 
-        self._method_cb: Dict[Union[Enum, str], Callable[[Any], Any]] = method_cb if method_cb else {}
+        self._method_cb: Dict[str, Callable[[Any], Any]] = method_cb if method_cb else {}
 
         self._id_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
         self._id_error_cb: Dict[Union[str, int, None], Callable[[Any], None]] = {}
-        self._id_method: Dict[Union[str, int, None], Union[Enum, str]] = {}
+        self._id_method: Dict[Union[str, int, None], str] = {}
 
         set_id_mapping(self._id_method)
 
     def create_request(
         self,
-        method: Union[Enum, str],
+        method: str,
         callback: Callable[[Any], None],
         error_callback: Optional[Callable[[ErrorModel], None]] = None,
         params: Optional[Any] = None,
@@ -242,7 +249,7 @@ class SlxJsonRpc:
 
     def _add_result_handling(
         self,
-        method: Union[Enum, str],
+        method: str,
         _id: Union[str, int, None],
         callback: Callable[[Any], None],
         error_callback: Optional[Callable[[ErrorModel], None]] = None,
@@ -255,7 +262,7 @@ class SlxJsonRpc:
 
     def create_notification(
         self,
-        method: Union[Enum, str],
+        method: str,
         params: Optional[Any] = None,
     ) -> Optional[RpcNotification]:
         """

@@ -76,10 +76,10 @@ class RpcVersion(str, Enum):
 #                             JsonRpc Request Object
 ###############################################################################
 
-_params_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_params_mapping: Dict[str, Union[type, Type[Any]]] = {}
 
 
-def set_params_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
+def set_params_map(mapping: Dict[str, Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
     global _params_mapping
     _params_mapping = mapping
@@ -96,7 +96,7 @@ class RpcRequest(BaseModel):
         params: (Optional) The input parameters for the invoked method.
     """
     jsonrpc: Optional[RpcVersion] = None
-    method: Union[Enum, str]
+    method: str
     id: Union[str, int] = Field(default_factory=lambda: _id_gen(name=rpc_get_name()))
     params: Optional[Any] = Field(default=None, validate_default=True)
 
@@ -109,7 +109,7 @@ class RpcRequest(BaseModel):
         return v or _id_gen(name=rpc_get_name() or info.data.get('method'))
 
     @classmethod
-    def update_method(cls, new_type: Enum) -> None:
+    def update_method(cls, new_type: Type[Enum]) -> None:
         """Update the Method schema, to fit the new one."""
         cls.model_fields['method'] = FieldInfo(
             annotation=new_type,
@@ -156,14 +156,14 @@ class RpcNotification(BaseModel):
         params: (Optional) The input parameters for the invoked method.
     """
     jsonrpc: Optional[RpcVersion] = None
-    method: Union[Enum, str]
+    method: str
     params: Optional[Any] = Field(default=None, validate_default=True)
 
     """Enforce that there can not be added extra keys to the BaseModel."""
     model_config: ConfigDict = ConfigDict(extra='forbid')  # type: ignore
 
     @classmethod
-    def update_method(cls, new_type: Enum) -> Any:
+    def update_method(cls, new_type: Type[Enum]) -> Any:
         """Update the Method schema, to fit the new one."""
         cls.model_fields['method'] = FieldInfo(
             annotation=new_type,
@@ -202,18 +202,18 @@ class RpcNotification(BaseModel):
 #                          JsonRpc Response Object
 ###############################################################################
 
-_result_mapping: Dict[Union[Enum, str], Union[type, Type[Any]]] = {}
+_result_mapping: Dict[str, Union[type, Type[Any]]] = {}
 
-_id_mapping: Dict[Union[str, int, None], Union[Enum, str]] = {}
+_id_mapping: Dict[Union[str, int, None], str] = {}
 
 
-def set_id_mapping(mapping: Dict[Union[str, int, None], Union[Enum, str]]) -> None:
+def set_id_mapping(mapping: Dict[Union[str, int, None], str]) -> None:
     """Set the id to method mapping."""
     global _id_mapping
     _id_mapping = mapping
 
 
-def set_result_map(mapping: Dict[Union[Enum, str], Union[type, Type[Any]]]) -> None:
+def set_result_map(mapping: Dict[str, Union[type, Type[Any]]]) -> None:
     """Set the method to params schema mapping."""
     global _result_mapping
     _result_mapping = mapping
