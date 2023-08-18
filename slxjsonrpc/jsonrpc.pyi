@@ -1,21 +1,21 @@
-from _typeshed import Incomplete
+import logging
 from enum import Enum
 from pydantic_core import ErrorDetails as ErrorDetails
-from slxjsonrpc.schema.jsonrpc import ErrorModel as ErrorModel, MethodError as MethodError, RpcBatch as RpcBatch, RpcError as RpcError, RpcErrorCode as RpcErrorCode, RpcErrorMsg as RpcErrorMsg, RpcNotification as RpcNotification, RpcRequest as RpcRequest, RpcResponse as RpcResponse, RpcSchemas as RpcSchemas, rpc_set_name as rpc_set_name, set_id_mapping as set_id_mapping, set_params_map as set_params_map, set_result_map as set_result_map
+from slxjsonrpc.schema.jsonrpc import ErrorModel as ErrorModel, MethodError as MethodError, RpcBatch as RpcBatch, RpcError as RpcError, RpcErrorCode as RpcErrorCode, RpcErrorMsg as RpcErrorMsg, RpcNotification as RpcNotification, RpcRequest as RpcRequest, RpcResponse as RpcResponse, RpcSchemas as RpcSchemas, RpcVersion as RpcVersion, rpc_set_name as rpc_set_name, set_id_mapping as set_id_mapping, set_params_map as set_params_map, set_result_map as set_result_map
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type, Union
 
 class RpcErrorException(Exception):
-    code: Incomplete
-    msg: Incomplete
-    data: Incomplete
+    code: Union[int, RpcErrorCode]
+    msg: str
+    data: Optional[Any]
     def __init__(self, code: Union[int, RpcErrorCode], msg: str, data: Optional[Any] = ...) -> None: ...
-    def get_rpc_model(self, id: Union[str, int, None]) -> RpcError: ...
+    def get_rpc_model(self, id: Union[str, int, None], include_data: bool = ...) -> RpcError: ...
 
 def method_callback_example(params: Optional[Any]) -> Optional[Any]: ...
 
 class SlxJsonRpc:
-    log: Incomplete
-    def __init__(self, methods: Optional[Enum] = ..., method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = ..., result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ..., params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ...) -> None: ...
+    log: logging.Logger
+    def __init__(self, methods: Optional[Enum] = ..., method_cb: Optional[Dict[Union[Enum, str], Callable[[Any], Any]]] = ..., result: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ..., params: Optional[Dict[Union[Enum, str], Union[type, Type[Any]]]] = ..., verbose_errors: bool = ...) -> None: ...
     def create_request(self, method: Union[Enum, str], callback: Callable[[Any], None], error_callback: Optional[Callable[[ErrorModel], None]] = ..., params: Optional[Any] = ...) -> Optional[RpcRequest]: ...
     def create_notification(self, method: Union[Enum, str], params: Optional[Any] = ...) -> Optional[RpcNotification]: ...
     def batch(self) -> Iterator[None]: ...
