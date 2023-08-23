@@ -7,6 +7,7 @@ from slxjsonrpc.schema.jsonrpc import RpcError
 from slxjsonrpc.schema.jsonrpc import RpcNotification
 from slxjsonrpc.schema.jsonrpc import RpcRequest
 from slxjsonrpc.schema.jsonrpc import RpcResponse
+from slxjsonrpc.schema.jsonrpc import RpcSchemas
 
 __all__ = [
     'SlxJsonRpc',
@@ -16,6 +17,7 @@ __all__ = [
     'RpcNotification',
     'RpcRequest',
     'RpcResponse',
+    'RpcSchemas',
 ]
 
 __version__ = "v0.9.2"
