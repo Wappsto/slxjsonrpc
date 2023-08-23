@@ -75,7 +75,7 @@ setup(
     ],
     packages=find_packages(),
     package_data={
-        'slxjsonrpc': ["py.typed", "*.pyi", "**/*.pyi"],
+        'slxjsonrpc': ["py.typed"],
     },
     tests_require=[
         'pytest',

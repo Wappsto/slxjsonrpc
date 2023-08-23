@@ -34,9 +34,6 @@ lint:
 test: lint
 	${ENV}/bin/tox
 
-mypy-stub:
-	${ENV}/bin/stubgen slxjsonrpc/{*,**/*}.py --out .
-
 build: clean-all setup
 	${ENV}/bin/python3 setup.py sdist bdist_wheel
 
